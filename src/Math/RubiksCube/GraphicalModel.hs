@@ -1,29 +1,36 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE Rank2Types #-}
 
 module Math.RubiksCube.GraphicalModel
   ( Aut
-  , Side3X3
+  , Row3 (Row3), left, center, right
+  , Col3 (Col3), top, middle, bottom
+  , Side3X3 (Side3X3)
   , topLeft, topCenter, topRight
   , middleLeft, middleCenter, middleRight
   , bottomLeft, bottomCenter, bottomRight
-  , Col3, top, middle, bottom
-  , Row3, left, center, right
   , rotateCW, rotateCCW
   , topRow, middleRow, bottomRow
   , leftCol, centerCol, rightCol
-  , Cube, frontSide, backSide, leftSide, rightSide, upSide, downSide
-  , Cube3X3, cube
+  , Cube (Cube), frontSide, backSide, leftSide, rightSide, upSide, downSide
+  , Cube3X3 (Cube3X3), cube
   , rotateLeft, rotateRight
+  , rotateDown, rotateUp
   , moveU, moveD
   , moveL, moveR
   , moveF, moveB
   , move
+  , upLayer, middleLayer, downLayer
+  , centerFields, cornerFields
   ) where
 
 import Control.Lens
 import Math.RubiksCube.Move (Move (..))
+import Data.Foldable (Foldable)
+import Control.Applicative (Applicative (..), (<$>))
 
 -- | The type of automorphisms
 type Aut a = Iso' a a
@@ -32,7 +39,11 @@ data Row3 a =
   Row3 { _left :: a
        , _center :: a
        , _right :: a
-       } deriving (Show, Eq, Functor)
+       } deriving (Show, Eq, Functor, Foldable, Traversable)
+
+instance Applicative Row3 where
+  pure v = Row3 v v v
+  Row3 f g h <*> Row3 a b c = Row3 (f a) (g b) (h c)
 
 makeLenses ''Row3
 
@@ -43,7 +54,11 @@ data Col3 a =
   Col3 { _top :: a
        , _middle :: a
        , _bottom :: a
-       } deriving (Show, Eq, Functor)
+       } deriving (Show, Eq, Functor, Foldable, Traversable)
+
+instance Applicative Col3 where
+  pure v = Col3 v v v
+  Col3 f g h <*> Col3 a b c = Col3 (f a) (g b) (h c)
 
 makeLenses ''Col3
 
@@ -60,7 +75,12 @@ data Side3X3 a =
           , _bottomLeft :: a
           , _bottomCenter :: a
           , _bottomRight :: a
-          } deriving (Show, Eq, Functor)
+          } deriving (Show, Eq, Functor, Foldable, Traversable)
+
+instance  Applicative Side3X3 where
+  pure v = Side3X3 v v v v v v v v v
+  Side3X3 f1 f2 f3 f4 f5 f6 f7 f8 f9 <*> Side3X3 v1 v2 v3 v4 v5 v6 v7 v8 v9 =
+    Side3X3 (f1 v1) (f2 v2) (f3 v3) (f4 v4) (f5 v5) (f6 v6) (f7 v7) (f8 v8) (f9 v9)
 
 makeLenses ''Side3X3
 
@@ -124,6 +144,11 @@ rightCol = lens getter setter
     setter (Side3X3 tl tc _ ml mc _ bl bc _) (Col3 tr mr br) =
       Side3X3 tl tc tr ml mc mr bl bc br
 
+sideCorners :: Traversal' (Side3X3 a) a
+sideCorners f (Side3X3 tl tc tr ml mc mr bl bc br) =
+  (\tl' tr' bl' br' -> Side3X3 tl' tc tr' ml mc mr bl' bc br')
+  <$> f tl <*> f tr <*> f bl <*> f br
+
 {-
       +---+
       | u |
@@ -141,7 +166,12 @@ data Cube a =
        , _rightSide :: a
        , _upSide :: a
        , _downSide :: a
-       } deriving (Show, Eq, Functor)
+       } deriving (Show, Eq, Functor, Foldable, Traversable)
+
+instance Applicative Cube where
+  pure v = Cube v v v v v v
+  Cube ff fb fl fr fu fd <*> Cube vf vb vl vr vu vd =
+    Cube (ff vf) (fb vb) (fl vl) (fr vr) (fu vu) (fd vd)
 
 rotRight' :: Cube a -> Cube a
 rotRight' (Cube f b l r u d) = Cube l r b f u d
@@ -152,14 +182,30 @@ rotLeft' (Cube f b l r u d) = Cube r l f b u d
 rotateRight' :: Aut (Cube a)
 rotateRight' = iso rotRight' rotLeft'
 
-rotateLeft' :: Aut (Cube a)
-rotateLeft' = iso rotLeft' rotRight'
+_rotateLeft' :: Aut (Cube a)
+_rotateLeft' = from rotateRight'
+
+rotDown' :: Reversing a => Cube a -> Cube a
+rotDown' (Cube f b l r u d) = Cube u (reversing d) l r (reversing b) f
+
+rotUp' :: Reversing a => Cube a -> Cube a
+rotUp' (Cube f b l r u d) = Cube d (reversing u) l r f (reversing b)
+
+rotateDown' :: Reversing a => Aut (Cube a)
+rotateDown' = iso rotDown' rotUp'
+
+_rotateUp' :: Reversing a => Aut (Cube a)
+_rotateUp' = from rotateDown'
 
 makeLenses ''Cube
 
 newtype Cube3X3 a =
   Cube3X3 { _cube :: Cube (Side3X3 a)
           } deriving (Show, Eq, Functor)
+
+instance Applicative Cube3X3 where
+  pure = Cube3X3 . pure . pure
+  Cube3X3 f <*> Cube3X3 v = Cube3X3 ((<*>) <$> f <*> v)
 
 makeLenses ''Cube3X3
 
@@ -175,7 +221,21 @@ rotateRight =
 rotateLeft :: Aut (Cube3X3 a)
 rotateLeft = from rotateRight
 
-data Vec4 a = Vec4 a a a a deriving (Show, Eq, Functor)
+rotateDown :: Aut (Cube3X3 a)
+rotateDown =
+  cong cube $ rotateDown'
+            . cong leftSide rotateCW
+            . cong rightSide rotateCCW
+
+rotateUp :: Aut (Cube3X3 a)
+rotateUp = from rotateDown
+
+data Vec4 a = Vec4 a a a a deriving (Show, Eq, Functor, Foldable, Traversable)
+
+instance Applicative Vec4 where
+  pure v = Vec4 v v v v
+  Vec4 f1 f2 f3 f4 <*> Vec4 v1 v2 v3 v4 =
+    Vec4 (f1 v1) (f2 v2) (f3 v3) (f4 v4)
 
 cycRight :: Vec4 a -> Vec4 a
 cycRight (Vec4 a b c d) = Vec4 d a b c
@@ -195,35 +255,35 @@ type ColsLens a = Lens' (Cube (Side3X3 a)) (Vec4 (Col3 a))
 horizontalRows :: Lens' (Side3X3 a) (Row3 a) -> RowsLens a
 horizontalRows rowLens = lens getter setter
   where
-    getter (Cube f b l r u d) =
+    getter (Cube f b l r _u _d) =
       fmap (view rowLens) (Vec4 f r b l)
     setter (Cube f b l r u d) (Vec4 f' r' b' l') =
       Cube (set rowLens f' f) (set rowLens b' b)
            (set rowLens l' l) (set rowLens r' r) u d
 
-topRows :: RowsLens a
-topRows = horizontalRows topRow
+upRows :: RowsLens a
+upRows = horizontalRows topRow
 
-_middleRows :: RowsLens a
-_middleRows = horizontalRows middleRow
+middleRows :: RowsLens a
+middleRows = horizontalRows middleRow
 
-bottomRows :: RowsLens a
-bottomRows = horizontalRows topRow
+downRows :: RowsLens a
+downRows = horizontalRows bottomRow
 
 moveU :: Aut (Cube3X3 a)
 moveU =
-  cong cube $ cong topRows cycleLeft
+  cong cube $ cong upRows cycleLeft
             . cong upSide rotateCW
 
 moveD :: Aut (Cube3X3 a)
 moveD =
-  cong cube $ cong bottomRows cycleRight
+  cong cube $ cong downRows cycleRight
             . cong downSide rotateCW
 
 verticalCols :: Lens' (Side3X3 a) (Col3 a) -> ColsLens a
 verticalCols colLens = lens getter setter
   where
-    getter (Cube f b l r u d) =
+    getter (Cube f b _l _r u d) =
       Vec4 (f ^. colLens) (u ^. colLens) (b ^. reversed . colLens) (d ^. colLens)
     setter (Cube f b l r u d) (Vec4 f' u' b' d') =
       Cube (set colLens f' f) (set (reversed . colLens) b' b) l r
@@ -251,11 +311,11 @@ moveR =
 ringCols :: Lens' (Side3X3 a) (Col3 a) -> ColsLens a
 ringCols colLens = lens getter setter
   where
-    getter (Cube f b l r u d) =
+    getter (Cube _f _b l r u d) =
       Vec4 (r ^. colLens) (u ^. rotateCW . colLens)
            (l ^. reversed . colLens) (d ^. rotateCCW . colLens)
     setter (Cube f b l r u d) (Vec4 r' u' l' d') =
-      Cube f b (set colLens r' r) (set (reversed . colLens) l' l)
+      Cube f b (set (reversed . colLens) l' l) (set colLens r' r)
                (set (rotateCW . colLens) u' u) (set (rotateCCW . colLens) d' d)
 
 frontCols :: ColsLens a
@@ -290,3 +350,26 @@ move F  = moveF
 move F' = from moveF
 move B  = moveB
 move B' = from moveB
+
+upLayer :: Traversal' (Cube3X3 a) a
+upLayer f =
+  cube $ \cube ->
+    (\upSide' upRows' -> cube & upSide .~ upSide' & upRows .~ upRows')
+       <$> (traverse f (cube ^. upSide))
+       <*> (traverse (traverse f) (cube ^. upRows))
+
+middleLayer :: Traversal' (Cube3X3 a) a
+middleLayer = cube.middleRows.traverse.traverse
+
+downLayer :: Traversal' (Cube3X3 a) a
+downLayer f =
+  cube $ \cube ->
+    (\downSide' downRows' -> cube & downSide .~ downSide' & downRows .~ downRows')
+       <$> (traverse f (cube ^. downSide))
+       <*> (traverse (traverse f) (cube ^. downRows))
+
+centerFields :: Traversal' (Cube3X3 a) a
+centerFields = cube.traverse.middleCenter
+
+cornerFields :: Traversal' (Cube3X3 a) a
+cornerFields = cube.traverse.sideCorners
