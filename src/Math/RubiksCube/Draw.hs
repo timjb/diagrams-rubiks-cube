@@ -119,7 +119,7 @@ drawMoveD rev (Offsets dx dy) c =
        (drawCube (Offsets dx (-dy)) c)
 drawMoveL rev (Offsets dx dy) c =
   atop (moveArrow rev (p2 (0.5, 2.8)) (p2 (0.5, 0.2)))
-       (drawCube (Offsets (-dx) dy) c)
+       (drawCube (Offsets dx dy) c)
 drawMoveR rev off c =
   atop (moveArrow rev (p2 (2.5, 0.2)) (p2 (2.5, 2.8)))
        (drawCube off c)
