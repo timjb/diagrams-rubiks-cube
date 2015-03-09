@@ -22,7 +22,7 @@ module Math.RubiksCube.GraphicalModel
   , moveU, moveD
   , moveL, moveR
   , moveF, moveB
-  , move
+  , move, doMoves, undoMoves
   , upLayer, middleLayer, downLayer
   , centerFields, cornerFields
   ) where
@@ -350,6 +350,13 @@ move F  = moveF
 move F' = from moveF
 move B  = moveB
 move B' = from moveB
+
+doMoves :: [Move] -> Aut (Cube3X3 a)
+doMoves [] = iso id id
+doMoves (m:ms) = move m . doMoves ms
+
+undoMoves :: [Move] -> Aut (Cube3X3 a)
+undoMoves = from . doMoves
 
 upLayer :: Traversal' (Cube3X3 a) a
 upLayer f =
