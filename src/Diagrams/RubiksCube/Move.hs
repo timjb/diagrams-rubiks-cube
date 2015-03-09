@@ -1,4 +1,4 @@
-module Math.RubiksCube.Move
+module Diagrams.RubiksCube.Move
   ( Move (..)
   , mirror
   , invert

@@ -18,10 +18,10 @@ cabal-version:       >=1.10
 
 library
   ghc-options: -Wall
-  exposed-modules:     Math.RubiksCube,
-                       Math.RubiksCube.Move,
-                       Math.RubiksCube.GraphicalModel,
-                       Math.RubiksCube.Draw
+  exposed-modules:     Diagrams.RubiksCube,
+                       Diagrams.RubiksCube.Move,
+                       Diagrams.RubiksCube.Model,
+                       Diagrams.RubiksCube.Draw
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >= 4.6 && < 5,

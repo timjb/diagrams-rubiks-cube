@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Rank2Types #-}
 
-module Math.RubiksCube.Draw
+module Diagrams.RubiksCube.Draw
   ( solvedCube3X3
   , drawSide3X3
   , drawFoldMap3X3
@@ -13,8 +13,8 @@ module Math.RubiksCube.Draw
   , drawMoves, drawMovesBackward
   ) where
 
-import Math.RubiksCube.Move (Move (..))
-import Math.RubiksCube.GraphicalModel
+import Diagrams.RubiksCube.Move (Move (..))
+import Diagrams.RubiksCube.Model
 
 import Control.Lens hiding ((#))
 import Diagrams.Prelude hiding (center)
@@ -26,13 +26,12 @@ import Data.Default.Class
 solvedCube3X3 :: Cube3X3 (Colour Double)
 solvedCube3X3 = Cube3X3 (Cube f b l r u d)
   where
-    f = constSide orange
-    b = constSide red
-    l = constSide white
-    r = constSide yellow
-    u = constSide green
-    d = constSide blue
-    constSide v = Side3X3 v v v v v v v v v
+    f = pure orange
+    b = pure red
+    l = pure white
+    r = pure yellow
+    u = pure green
+    d = pure blue
 
 drawSide3X3
   :: Renderable (Path R2) b

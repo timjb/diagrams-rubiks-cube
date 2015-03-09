@@ -4,7 +4,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE Rank2Types #-}
 
-module Math.RubiksCube.GraphicalModel
+module Diagrams.RubiksCube.Model
   ( Aut
   , Row3 (Row3), left, center, right
   , Col3 (Col3), top, middle, bottom
@@ -28,7 +28,7 @@ module Math.RubiksCube.GraphicalModel
   ) where
 
 import Control.Lens
-import Math.RubiksCube.Move (Move (..))
+import Diagrams.RubiksCube.Move (Move (..))
 import Data.Foldable (Foldable)
 import Control.Applicative (Applicative (..), (<$>))
 
