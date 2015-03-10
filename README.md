@@ -1,6 +1,6 @@
 # diagrams-rubiks-cube [![Hackage version][hackage-image]][hackage-url] [![Hackage dependencies][hackage-deps-image]][hackage-deps-url]
 
-Haskell library to draw the Rubik's cube.
+Haskell library for drawing the Rubik's Cube.
 
 ![Move sequence][moves-image]
 
