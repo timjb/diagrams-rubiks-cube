@@ -2,3 +2,5 @@ cabal.sandbox.config
 .cabal-sandbox
 cabal.config
 dist
+.diagrams-cache
+.DS_Store

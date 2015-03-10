@@ -13,7 +13,8 @@ maintainer:          tim@timbaumann.info
 -- copyright:           
 category:            Math
 build-type:          Simple
--- extra-source-files:  
+extra-source-files:  README.md, diagrams/*.svg
+extra-doc-files:     diagrams/*.svg
 cabal-version:       >=1.10
 
 library

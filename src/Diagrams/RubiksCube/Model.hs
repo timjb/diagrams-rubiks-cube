@@ -11,7 +11,6 @@ module Diagrams.RubiksCube.Model (
   , middleLeft, middleCenter, middleRight
   , bottomLeft, bottomCenter, bottomRight
   , rotateSideCW, rotateSideCCW
-  -- $foldingPattern
   , Cube (..), frontSide, backSide, leftSide, rightSide, upSide, downSide
   , RubiksCube (..), cube
   -- * Selecting rows and columns
@@ -171,19 +170,17 @@ sideEdges f (Side tl tc tr ml mc mr bl bc br) =
   (\tc' ml' mr' bc' -> Side tl tc' tr ml' mc mr' bl bc' br)
   <$> f tc <*> f ml <*> f mr <*> f bc
 
-{- $foldingPattern
-@
-      +---+
-      | u |
-  +---+---+---+---+
-  | l | f | r | b |
-  +---+---+---+---+
-      | d |
-      +---+
-@
--}
-
 -- | A cube with six sides.
+--
+-- @
+--      +---+
+--      | u |
+--  +---+---+---+---+
+--  | l | f | r | b |
+--  +---+---+---+---+
+--      | d |
+--      +---+
+-- @
 data Cube a =
   Cube { _frontSide :: a
        , _backSide :: a

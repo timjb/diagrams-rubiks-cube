@@ -23,6 +23,12 @@ import Data.Function (on)
 import qualified Diagrams.Prelude as P
 import Data.Default.Class
 
+-- > import Diagrams.RubiksCube.Draw
+-- > solvedCube = drawFoldingPattern solvedRubiksCube
+
+-- | The solved cube.
+--
+-- <<diagrams/src_Diagrams_RubiksCube_Draw_solvedCube.svg#diagram=solvedCube&height=150&width=200>>
 solvedRubiksCube :: RubiksCube (Colour Double)
 solvedRubiksCube = RubiksCube (Cube f b l r u d)
   where
@@ -33,10 +39,22 @@ solvedRubiksCube = RubiksCube (Cube f b l r u d)
     u = pure green
     d = pure blue
 
+-- > import Diagrams.RubiksCube
+-- > drawSideDia =
+-- >   let side = drawSide (r2 (1,0)) (r2 (0,1)) (pure yellow & topLeft .~ green)
+-- >       dxArrow = arrowBetween (p2 (4,1)) (p2 (5,1))
+-- >       dxLabel = position [(p2 (4.5, 0.7), scale 0.4 (text "dx"))]
+-- >       dyArrow = arrowBetween (p2 (4,1)) (p2 (4,2))
+-- >       dyLabel = position [(p2 (3.65, 1.5), scale 0.4 (text "dy"))]
+-- >   in mconcat [side, dxArrow, dxLabel, dyArrow, dyLabel]
+
+-- | Draws one 3x3 side of the cube.
+--
+-- <<diagrams/src_Diagrams_RubiksCube_Draw_drawSideDia.svg#diagram=drawSideDia&height=150&width=200>>
 drawSide
   :: Renderable (Path R2) b
-  => (Double, Double)
-  -> (Double, Double)
+  => R2 -- ^ dx
+  -> R2 -- ^ dy
   -> Side (Colour Double)
   -> Diagram b R2
 drawSide dx dy side = mconcat $ do
@@ -46,19 +64,21 @@ drawSide dx dy side = mconcat $ do
   where
     count = zip [(0 :: Int)..]
     rows = [bottomRow, middleRow, topRow]
-    pos x y = p2 $ unr2 $ fromIntegral x *^ r2 dx ^+^ fromIntegral y *^ r2 dy
+    pos x y = p2 $ unr2 $ fromIntegral x *^ dx ^+^ fromIntegral y *^ dy
     drawField :: Renderable (Path R2) b => Int -> Int -> Colour Double -> Diagram b R2
     drawField x y color =
       fromVertices [pos x y, pos (x+1) y, pos (x+1) (y+1), pos x (y+1), pos x y]
         # mapLoc closeTrail # trailLike # fc color
 
+-- | Draw the folding pattern of the cube. The front side is at the center of
+-- the pattern.
 drawFoldingPattern
   :: Renderable (Path R2) b
   => RubiksCube (Colour Double)
   -> Diagram b R2
 drawFoldingPattern c' =
   let c = c' ^. cube
-      drawSide' = drawSide (1,0) (0,1)
+      drawSide' = drawSide (r2 (1,0)) (r2 (0,1))
   in hcat $ map P.center
        [ drawSide' (c ^. leftSide)
        , drawSide' (c ^. upSide) ===
@@ -68,6 +88,24 @@ drawFoldingPattern c' =
        , drawSide' (c ^. backSide)
        ]
 
+-- > import Diagrams.RubiksCube
+-- > offsetsDia =
+-- >   let off = Offsets 2 1
+-- >       c = drawRubiksCube off solvedRubiksCube
+-- >       oxArrow = arrowBetween (p2 (3,-1)) (p2 (5,-1))
+-- >       oxLabel = position [(p2 (4, -1.75), scale 0.8 (text "offX"))]
+-- >       oyArrow = arrowBetween (p2 (7,0)) (p2 (7,1))
+-- >       oyLabel = position [(p2 (8, 0.5), scale 0.8 (text "offY"))]
+-- >       line start end = fromVertices [p2 start, p2 end]
+-- >       lines = mconcat
+-- >         [ line (3,-1) (3,0)
+-- >         , line (5,-1) (5,2)
+-- >         , line (3,0) (7,0)
+-- >         , line (5,1) (7,1)
+-- >         ] # lc lightgray # dashingN [0.01,0.01] 0
+-- >   in mconcat [c, oxArrow, oxLabel, oyArrow, oyLabel, lines] # pad 1.1
+
+-- | <<diagrams/src_Diagrams_RubiksCube_Draw_offsetsDia.svg#diagram=offsetsDia&height=200&width=200>>
 data Offsets =
   Offsets { _offsetX :: Double
           , _offsetY :: Double
@@ -78,6 +116,15 @@ makeLenses ''Offsets
 instance Default Offsets where
   def = Offsets 0.3 0.35
 
+-- | Draw the Rubik's cube in parallel perspective.
+--
+-- <<diagrams/src_Diagrams_RubiksCube_Draw_drawCubeExample.svg#diagram=drawCubeExample&height=150&width=150>>
+--
+-- > import Diagrams.RubiksCube
+-- > import Control.Lens
+-- > drawCubeExample =
+-- >   let c = solvedRubiksCube ^. undoMoves [R,U,R',U']
+-- >   in drawRubiksCube with c
 drawRubiksCube
   :: Renderable (Path R2) b
   => Offsets
@@ -94,13 +141,16 @@ drawRubiksCube (Offsets dx dy) c' = position $
       , (-dy, u)
       , (dy, d)
       ]
-    drawSide' dx' dy' side = drawSide dx' dy' (c' ^. cube . side)
-    f = (p2 (0, 0), drawSide' (1,0) (0,1) frontSide)
-    b = (p2 (3*dx, 3+3*dy), drawSide' (1,0) (0,-1) backSide)
-    r = (p2 (3,0), drawSide' (dx,dy) (0,1) rightSide)
-    l = (p2 (3*dx, 3*dy), drawSide' (-dx,-dy) (0,1) leftSide)
-    u = (p2 (0,3), drawSide' (1,0) (dx,dy) upSide)
-    d = (p2 (3*dx, 3*dy), drawSide' (1,0) (-dx,-dy) downSide)
+    dx' = r2 (1,0)
+    dy' = r2 (0,1)
+    dz' = r2 (dx,dy)
+    drawSide' dx1 dx2 side = drawSide dx1 dx2 (c' ^. cube . side)
+    f = (p2 (0, 0), drawSide' dx' dy' frontSide)
+    b = (p2 (3*dx, 3+3*dy), drawSide' dx' (-dy') backSide)
+    r = (p2 (3,0), drawSide' dz' dy' rightSide)
+    l = (p2 (3*dx, 3*dy), drawSide' (-dz') dy' leftSide)
+    u = (p2 (0,3), drawSide' dx' dz' upSide)
+    d = (p2 (3*dx, 3*dy), drawSide' dx' (-dz') downSide)
 
 moveArrow
   :: Renderable (Path R2) b
@@ -139,6 +189,16 @@ drawMoveF rev off c =
     arr opts' s e = (if rev then arrowBetween' opts' e s else arrowBetween' opts' s e)
                    # lc red
 
+-- | Draw the Rubik's cube in parallel perspective with an arrow indicating the
+-- next move. If the the bottom layer is moved, the cube will be shown from below.
+--
+-- <<diagrams/src_Diagrams_RubiksCube_Draw_drawMoveExample.svg#diagram=drawMoveExample&height=150&width=150>>
+--
+-- > import Diagrams.RubiksCube
+-- > import Control.Lens
+-- > drawMoveExample =
+-- >   let c = solvedRubiksCube ^. undoMoves [L,U,L',U']
+-- >   in drawMove L with c
 drawMove
   :: Renderable (Path R2) b
   => Move
@@ -158,9 +218,9 @@ drawMove F' = drawMoveF True
 drawMove _  = error "can't draw back moves!"
 
 data MovesSettings =
-  MovesSettings { _moveSep :: Double
-                , _showStart :: Bool
-                , _showEnd :: Bool
+  MovesSettings { _moveSep :: Double -- ^ space between cubes
+                , _showStart :: Bool -- ^ show the start configuration?
+                , _showEnd :: Bool -- ^ show the end configuration?
                 , _offsets :: Offsets
                 } deriving (Eq, Show, Read)
 
@@ -169,10 +229,21 @@ makeLenses ''MovesSettings
 instance Default MovesSettings where
   def = MovesSettings 1.75 False True def
 
+-- | Draws a sequence of moves.
+--
+-- <<diagrams/src_Diagrams_RubiksCube_Draw_drawMovesExample.svg#diagram=drawMovesExample&height=100&width=600>>
+--
+-- > import Diagrams.RubiksCube
+-- > import Control.Lens
+-- > drawMovesExample =
+-- >   let moves = [R, F', R', D', F, F]
+-- >       startPos = solvedRubiksCube ^. undoMoves moves
+-- >       settings = with & showStart .~ True
+-- >   in drawMoves settings startPos moves
 drawMoves
   :: Renderable (Path R2) b
   => MovesSettings
-  -> RubiksCube (Colour Double)
+  -> RubiksCube (Colour Double) -- ^ the start configuration
   -> [Move]
   -> Diagram b R2
 drawMoves settings c moves =
@@ -187,14 +258,21 @@ drawMoves settings c moves =
       let c'' = c' ^. move m
       in ((i+1, c''), (pos i, drawMove m off c'))
 
+-- | Like 'drawMoves', but takes the end configuration instead of the start
+-- configuration. The previous example can be simplified with this:
+--
+-- > import Diagrams.RubiksCube
+-- > import Control.Lens
+-- > drawMovesExample' =
+-- >   let moves = [R, F', R', D', F, F]
+-- >       endPos = solvedRubiksCube
+-- >       settings = with & showStart .~ True
+-- >   in drawMovesBackward settings endPos moves
 drawMovesBackward
   :: Renderable (Path R2) b
   => MovesSettings
-  -> RubiksCube (Colour Double)
+  -> RubiksCube (Colour Double) -- ^ the end configuration
   -> [Move]
   -> Diagram b R2
 drawMovesBackward settings c moves =
-  drawMoves settings (go c $ reverse moves) moves
-  where
-    go c' [] = c'
-    go c' (m:ms) = go (c' ^. from (move m)) ms
+  drawMoves settings (c ^. undoMoves moves) moves
