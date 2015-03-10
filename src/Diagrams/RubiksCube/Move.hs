@@ -4,9 +4,11 @@ module Diagrams.RubiksCube.Move
   , invert
   ) where
 
+-- | A move in <http://ruwix.com/the-rubiks-cube/notation/ standard notation>.
 data Move = D | D' | U | U' | L | L' | R | R' | F | F' | B | B'
   deriving (Eq, Show, Read)
 
+-- | The opposite move.
 invert :: Move -> Move
 invert D  = D'
 invert D' = D
@@ -21,6 +23,7 @@ invert F' = F
 invert B  = B'
 invert B' = B
 
+-- | Swaps left and right.
 mirror :: Move -> Move
 mirror D  = D'
 mirror D' = D

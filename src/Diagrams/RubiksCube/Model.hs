@@ -4,27 +4,32 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE Rank2Types #-}
 
-module Diagrams.RubiksCube.Model
-  ( Aut
-  , Row3 (Row3), left, center, right
-  , Col3 (Col3), top, middle, bottom
-  , Side3X3 (Side3X3)
+module Diagrams.RubiksCube.Model (
+  -- * Constructing cubes
+    Side (..)
   , topLeft, topCenter, topRight
   , middleLeft, middleCenter, middleRight
   , bottomLeft, bottomCenter, bottomRight
-  , rotateCW, rotateCCW
+  , rotateSideCW, rotateSideCCW
+  -- $foldingPattern
+  , Cube (..), frontSide, backSide, leftSide, rightSide, upSide, downSide
+  , RubiksCube (..), cube
+  -- * Selecting rows and columns
+  , Vec3 (..)
   , topRow, middleRow, bottomRow
   , leftCol, centerCol, rightCol
-  , Cube (Cube), frontSide, backSide, leftSide, rightSide, upSide, downSide
-  , Cube3X3 (Cube3X3), cube
+  -- * Traversing facets
+  -- ** By layer
+  , topLayerFacets, middleLayerFacets, bottomLayerFacets
+  -- ** By position
+  , centerFacets, cornerFacets, edgeFacets
+  -- * Rotating the whole cube
+  , Aut
   , rotateLeft, rotateRight
   , rotateDown, rotateUp
-  , moveU, moveD
-  , moveL, moveR
-  , moveF, moveB
+  , rotateCW, rotateCCW
+  -- * Moving layers of the cube
   , move, doMoves, undoMoves
-  , upLayer, middleLayer, downLayer
-  , centerFields, cornerFields
   ) where
 
 import Control.Lens
@@ -35,38 +40,40 @@ import Control.Applicative (Applicative (..), (<$>))
 -- | The type of automorphisms
 type Aut a = Iso' a a
 
-data Row3 a =
-  Row3 { _left :: a
-       , _center :: a
-       , _right :: a
-       } deriving (Show, Eq, Functor, Foldable, Traversable)
+-- | A list of fixed length 3.
+data Vec3 a = Vec3 a a a deriving (Show, Eq, Functor, Foldable, Traversable)
 
-instance Applicative Row3 where
-  pure v = Row3 v v v
-  Row3 f g h <*> Row3 a b c = Row3 (f a) (g b) (h c)
+instance Applicative Vec3 where
+  pure v = Vec3 v v v
+  Vec3 f1 f2 f3 <*> Vec3 v1 v2 v3 =
+    Vec3 (f1 v1) (f2 v2) (f3 v3)
 
-makeLenses ''Row3
+instance Reversing (Vec3 a) where
+  reversing (Vec3 a b c) = Vec3 c b a
 
-instance Reversing (Row3 a) where
-  reversing (Row3 l c r) = Row3 r c l
+-- | A list of fixed length 4.
+data Vec4 a = Vec4 a a a a deriving (Show, Eq, Functor, Foldable, Traversable)
 
-data Col3 a =
-  Col3 { _top :: a
-       , _middle :: a
-       , _bottom :: a
-       } deriving (Show, Eq, Functor, Foldable, Traversable)
+instance Applicative Vec4 where
+  pure v = Vec4 v v v v
+  Vec4 f1 f2 f3 f4 <*> Vec4 v1 v2 v3 v4 =
+    Vec4 (f1 v1) (f2 v2) (f3 v3) (f4 v4)
 
-instance Applicative Col3 where
-  pure v = Col3 v v v
-  Col3 f g h <*> Col3 a b c = Col3 (f a) (g b) (h c)
+cycRight :: Vec4 a -> Vec4 a
+cycRight (Vec4 a b c d) = Vec4 d a b c
 
-makeLenses ''Col3
+cycLeft :: Vec4 a -> Vec4 a
+cycLeft (Vec4 a b c d) = Vec4 b c d a
 
-instance Reversing (Col3 a) where
-  reversing (Col3 t m b) = Col3 b m t
+cycleLeft :: Aut (Vec4 a)
+cycleLeft = iso cycLeft cycRight
 
-data Side3X3 a =
-  Side3X3 { _topLeft :: a
+cycleRight :: Aut (Vec4 a)
+cycleRight = iso cycRight cycLeft
+
+-- | One side of the Rubik's Cube with 3*3 facets.
+data Side a =
+  Side { _topLeft :: a
           , _topCenter :: a
           , _topRight :: a
           , _middleLeft :: a
@@ -77,79 +84,95 @@ data Side3X3 a =
           , _bottomRight :: a
           } deriving (Show, Eq, Functor, Foldable, Traversable)
 
-instance  Applicative Side3X3 where
-  pure v = Side3X3 v v v v v v v v v
-  Side3X3 f1 f2 f3 f4 f5 f6 f7 f8 f9 <*> Side3X3 v1 v2 v3 v4 v5 v6 v7 v8 v9 =
-    Side3X3 (f1 v1) (f2 v2) (f3 v3) (f4 v4) (f5 v5) (f6 v6) (f7 v7) (f8 v8) (f9 v9)
+instance  Applicative Side where
+  pure v = Side v v v v v v v v v
+  Side f1 f2 f3 f4 f5 f6 f7 f8 f9 <*> Side v1 v2 v3 v4 v5 v6 v7 v8 v9 =
+    Side (f1 v1) (f2 v2) (f3 v3) (f4 v4) (f5 v5) (f6 v6) (f7 v7) (f8 v8) (f9 v9)
 
-makeLenses ''Side3X3
+makeLenses ''Side
 
-instance Reversing (Side3X3 a) where
-  reversing (Side3X3 tl tc tr ml mc mr bl bc br) =
-             Side3X3 br bc bl mr mc ml tr tc tl
+instance Reversing (Side a) where
+  reversing (Side tl tc tr ml mc mr bl bc br) =
+             Side br bc bl mr mc ml tr tc tl
 
-rotCW :: Side3X3 a -> Side3X3 a
-rotCW (Side3X3 tl tc tr ml mc mr bl bc br) =
-       Side3X3 bl ml tl bc mc tc br mr tr
+rotCW :: Side a -> Side a
+rotCW (Side tl tc tr ml mc mr bl bc br) =
+       Side bl ml tl bc mc tc br mr tr
 
-rotCCW :: Side3X3 a -> Side3X3 a
-rotCCW (Side3X3 tl tc tr ml mc mr bl bc br) =
-        Side3X3 tr mr br tc mc bc tl ml bl
+rotCCW :: Side a -> Side a
+rotCCW (Side tl tc tr ml mc mr bl bc br) =
+        Side tr mr br tc mc bc tl ml bl
 
-rotateCW :: Aut (Side3X3 a)
-rotateCW = iso rotCW rotCCW
+-- | Rotate the side clockwise.
+rotateSideCW :: Aut (Side a)
+rotateSideCW = iso rotCW rotCCW
 
-rotateCCW :: Aut (Side3X3 a)
-rotateCCW = iso rotCCW rotCW
+-- | Rotate the side counter-clockwise.
+rotateSideCCW :: Aut (Side a)
+rotateSideCCW = iso rotCCW rotCW
 
-topRow :: Lens' (Side3X3 a) (Row3 a)
+-- | The top three facets (from left to right).
+topRow :: Lens' (Side a) (Vec3 a)
 topRow = lens getter setter
   where
-    getter (Side3X3 tl tc tr _ _ _ _ _ _) = Row3 tl tc tr
-    setter (Side3X3 _ _ _ ml mc mr bl bc br) (Row3 tl tc tr) =
-      Side3X3 tl tc tr ml mc mr bl bc br
+    getter (Side tl tc tr _ _ _ _ _ _) = Vec3 tl tc tr
+    setter (Side _ _ _ ml mc mr bl bc br) (Vec3 tl tc tr) =
+      Side tl tc tr ml mc mr bl bc br
 
-middleRow :: Lens' (Side3X3 a) (Row3 a)
+-- | The middle three facets (from left to right).
+middleRow :: Lens' (Side a) (Vec3 a)
 middleRow = lens getter setter
   where
-    getter (Side3X3 _ _ _ ml mc mr _ _ _) = Row3 ml mc mr
-    setter (Side3X3 tl tc tr _ _ _ bl bc br) (Row3 ml mc mr) =
-      Side3X3 tl tc tr ml mc mr bl bc br
+    getter (Side _ _ _ ml mc mr _ _ _) = Vec3 ml mc mr
+    setter (Side tl tc tr _ _ _ bl bc br) (Vec3 ml mc mr) =
+      Side tl tc tr ml mc mr bl bc br
 
-bottomRow :: Lens' (Side3X3 a) (Row3 a)
+-- | The bottom three facets (from left to right).
+bottomRow :: Lens' (Side a) (Vec3 a)
 bottomRow = lens getter setter
   where
-    getter (Side3X3 _ _ _ _ _ _ bl bc br) = Row3 bl bc br
-    setter (Side3X3 tl tc tr ml mc mr _ _ _) (Row3 bl bc br) =
-      Side3X3 tl tc tr ml mc mr bl bc br
+    getter (Side _ _ _ _ _ _ bl bc br) = Vec3 bl bc br
+    setter (Side tl tc tr ml mc mr _ _ _) (Vec3 bl bc br) =
+      Side tl tc tr ml mc mr bl bc br
 
-leftCol :: Lens' (Side3X3 a) (Col3 a)
+-- | The left column (from top to down).
+leftCol :: Lens' (Side a) (Vec3 a)
 leftCol = lens getter setter
   where
-    getter (Side3X3 tl _ _ ml _ _ bl _ _) = Col3 tl ml bl
-    setter (Side3X3 _ tc tr _ mc mr _ bc br) (Col3 tl ml bl) =
-      Side3X3 tl tc tr ml mc mr bl bc br
+    getter (Side tl _ _ ml _ _ bl _ _) = Vec3 tl ml bl
+    setter (Side _ tc tr _ mc mr _ bc br) (Vec3 tl ml bl) =
+      Side tl tc tr ml mc mr bl bc br
 
-centerCol :: Lens' (Side3X3 a) (Col3 a)
+-- | The center column (from top to down).
+centerCol :: Lens' (Side a) (Vec3 a)
 centerCol = lens getter setter
   where
-    getter (Side3X3 _ tc _ _ mc _ _ bc _) = Col3 tc mc bc
-    setter (Side3X3 tl _ tr ml _ mr bl _ br) (Col3 tc mc bc) =
-      Side3X3 tl tc tr ml mc mr bl bc br
+    getter (Side _ tc _ _ mc _ _ bc _) = Vec3 tc mc bc
+    setter (Side tl _ tr ml _ mr bl _ br) (Vec3 tc mc bc) =
+      Side tl tc tr ml mc mr bl bc br
 
-rightCol :: Lens' (Side3X3 a) (Col3 a)
+-- | The right column (from top to down).
+rightCol :: Lens' (Side a) (Vec3 a)
 rightCol = lens getter setter
   where
-    getter (Side3X3 _ _ tr _ _ mr _ _ br) = Col3 tr mr br
-    setter (Side3X3 tl tc _ ml mc _ bl bc _) (Col3 tr mr br) =
-      Side3X3 tl tc tr ml mc mr bl bc br
+    getter (Side _ _ tr _ _ mr _ _ br) = Vec3 tr mr br
+    setter (Side tl tc _ ml mc _ bl bc _) (Vec3 tr mr br) =
+      Side tl tc tr ml mc mr bl bc br
 
-sideCorners :: Traversal' (Side3X3 a) a
-sideCorners f (Side3X3 tl tc tr ml mc mr bl bc br) =
-  (\tl' tr' bl' br' -> Side3X3 tl' tc tr' ml mc mr bl' bc br')
+-- | The four corners.
+sideCorners :: Traversal' (Side a) a
+sideCorners f (Side tl tc tr ml mc mr bl bc br) =
+  (\tl' tr' bl' br' -> Side tl' tc tr' ml mc mr bl' bc br')
   <$> f tl <*> f tr <*> f bl <*> f br
 
-{-
+-- | The four edges.
+sideEdges :: Traversal' (Side a) a
+sideEdges f (Side tl tc tr ml mc mr bl bc br) =
+  (\tc' ml' mr' bc' -> Side tl tc' tr ml' mc mr' bl bc' br)
+  <$> f tc <*> f ml <*> f mr <*> f bc
+
+{- $foldingPattern
+@
       +---+
       | u |
   +---+---+---+---+
@@ -157,8 +180,10 @@ sideCorners f (Side3X3 tl tc tr ml mc mr bl bc br) =
   +---+---+---+---+
       | d |
       +---+
+@
 -}
 
+-- | A cube with six sides.
 data Cube a =
   Cube { _frontSide :: a
        , _backSide :: a
@@ -199,60 +224,60 @@ _rotateUp' = from rotateDown'
 
 makeLenses ''Cube
 
-newtype Cube3X3 a =
-  Cube3X3 { _cube :: Cube (Side3X3 a)
-          } deriving (Show, Eq, Functor)
+-- | A normal Rubik's cube with 6 sides with 9 facets each.
+newtype RubiksCube a =
+  RubiksCube { _cube :: Cube (Side a)
+             } deriving (Show, Eq, Functor)
 
-instance Applicative Cube3X3 where
-  pure = Cube3X3 . pure . pure
-  Cube3X3 f <*> Cube3X3 v = Cube3X3 ((<*>) <$> f <*> v)
+instance Applicative RubiksCube where
+  pure = RubiksCube . pure . pure
+  RubiksCube f <*> RubiksCube v = RubiksCube ((<*>) <$> f <*> v)
 
-makeLenses ''Cube3X3
+makeLenses ''RubiksCube
 
 cong :: Traversal' s a -> Aut a -> Aut s
 cong t i = withIso i $ \f g -> iso (over t f) (over t g)
 
-rotateRight :: Aut (Cube3X3 a)
+-- | Rotate the whole Rubik's Cube such that the front side becomes the new
+-- right side and the top and bottom sides stay fixed.
+rotateRight :: Aut (RubiksCube a)
 rotateRight =
   cong cube $ rotateRight'
-            . cong upSide rotateCCW
-            . cong downSide rotateCW
+            . cong upSide rotateSideCCW
+            . cong downSide rotateSideCW
 
-rotateLeft :: Aut (Cube3X3 a)
+-- | Rotate the whole Rubik's Cube such that the front side becomes the new
+-- left side and the top and bottom sides stay fixed.
+rotateLeft :: Aut (RubiksCube a)
 rotateLeft = from rotateRight
 
-rotateDown :: Aut (Cube3X3 a)
+-- | Rotate the whole Rubik's Cube such that the front side becomes the new
+-- bottom side and the left and right sides stay fixed.
+rotateDown :: Aut (RubiksCube a)
 rotateDown =
   cong cube $ rotateDown'
-            . cong leftSide rotateCW
-            . cong rightSide rotateCCW
+            . cong leftSide rotateSideCW
+            . cong rightSide rotateSideCCW
 
-rotateUp :: Aut (Cube3X3 a)
+-- | Rotate the whole Rubik's Cube such that the front side becomes the new
+-- top side and the left and right sides stay fixed.
+rotateUp :: Aut (RubiksCube a)
 rotateUp = from rotateDown
 
-data Vec4 a = Vec4 a a a a deriving (Show, Eq, Functor, Foldable, Traversable)
+-- | Rotate the whole Rubik's Cube such that the top side becomes the new
+-- right side and the front and back sides stay fixed.
+rotateCW :: Aut (RubiksCube a)
+rotateCW = rotateUp . rotateLeft . rotateDown
 
-instance Applicative Vec4 where
-  pure v = Vec4 v v v v
-  Vec4 f1 f2 f3 f4 <*> Vec4 v1 v2 v3 v4 =
-    Vec4 (f1 v1) (f2 v2) (f3 v3) (f4 v4)
+-- | Rotate the whole Rubik's Cube such that the top side becomes the new
+-- left side and the front and back sides stay fixed.
+rotateCCW :: Aut (RubiksCube a)
+rotateCCW = from rotateCW
 
-cycRight :: Vec4 a -> Vec4 a
-cycRight (Vec4 a b c d) = Vec4 d a b c
+type RowsLens a = Lens' (Cube (Side a)) (Vec4 (Vec3 a))
+type ColsLens a = Lens' (Cube (Side a)) (Vec4 (Vec3 a))
 
-cycLeft :: Vec4 a -> Vec4 a
-cycLeft (Vec4 a b c d) = Vec4 b c d a
-
-cycleLeft :: Aut (Vec4 a)
-cycleLeft = iso cycLeft cycRight
-
-cycleRight :: Aut (Vec4 a)
-cycleRight = iso cycRight cycLeft
-
-type RowsLens a = Lens' (Cube (Side3X3 a)) (Vec4 (Row3 a))
-type ColsLens a = Lens' (Cube (Side3X3 a)) (Vec4 (Col3 a))
-
-horizontalRows :: Lens' (Side3X3 a) (Row3 a) -> RowsLens a
+horizontalRows :: Lens' (Side a) (Vec3 a) -> RowsLens a
 horizontalRows rowLens = lens getter setter
   where
     getter (Cube f b l r _u _d) =
@@ -270,17 +295,17 @@ middleRows = horizontalRows middleRow
 downRows :: RowsLens a
 downRows = horizontalRows bottomRow
 
-moveU :: Aut (Cube3X3 a)
+moveU :: Aut (RubiksCube a)
 moveU =
   cong cube $ cong upRows cycleLeft
-            . cong upSide rotateCW
+            . cong upSide rotateSideCW
 
-moveD :: Aut (Cube3X3 a)
+moveD :: Aut (RubiksCube a)
 moveD =
   cong cube $ cong downRows cycleRight
-            . cong downSide rotateCW
+            . cong downSide rotateSideCW
 
-verticalCols :: Lens' (Side3X3 a) (Col3 a) -> ColsLens a
+verticalCols :: Lens' (Side a) (Vec3 a) -> ColsLens a
 verticalCols colLens = lens getter setter
   where
     getter (Cube f b _l _r u d) =
@@ -298,25 +323,25 @@ _centerCols = verticalCols centerCol
 rightCols :: ColsLens a
 rightCols = verticalCols rightCol
 
-moveL :: Aut (Cube3X3 a)
+moveL :: Aut (RubiksCube a)
 moveL =
   cong cube $ cong leftCols cycleLeft
-            . cong leftSide rotateCW
+            . cong leftSide rotateSideCW
 
-moveR :: Aut (Cube3X3 a)
+moveR :: Aut (RubiksCube a)
 moveR =
   cong cube $ cong rightCols cycleRight
-           . cong rightSide rotateCW
+           . cong rightSide rotateSideCW
 
-ringCols :: Lens' (Side3X3 a) (Col3 a) -> ColsLens a
+ringCols :: Lens' (Side a) (Vec3 a) -> ColsLens a
 ringCols colLens = lens getter setter
   where
     getter (Cube _f _b l r u d) =
-      Vec4 (r ^. colLens) (u ^. rotateCW . colLens)
-           (l ^. reversed . colLens) (d ^. rotateCCW . colLens)
+      Vec4 (r ^. colLens) (u ^. rotateSideCW . colLens)
+           (l ^. reversed . colLens) (d ^. rotateSideCCW . colLens)
     setter (Cube f b l r u d) (Vec4 r' u' l' d') =
       Cube f b (set (reversed . colLens) l' l) (set colLens r' r)
-               (set (rotateCW . colLens) u' u) (set (rotateCCW . colLens) d' d)
+               (set (rotateSideCW . colLens) u' u) (set (rotateSideCCW . colLens) d' d)
 
 frontCols :: ColsLens a
 frontCols = ringCols leftCol
@@ -327,17 +352,18 @@ _betweenCols = ringCols centerCol
 backCols :: ColsLens a
 backCols = ringCols rightCol
 
-moveF :: Aut (Cube3X3 a)
+moveF :: Aut (RubiksCube a)
 moveF =
   cong cube $ cong frontCols cycleLeft
-            . cong frontSide rotateCW
+            . cong frontSide rotateSideCW
 
-moveB :: Aut (Cube3X3 a)
+moveB :: Aut (RubiksCube a)
 moveB =
   cong cube $ cong backCols cycleRight
-            . cong backSide rotateCW
+            . cong backSide rotateSideCW
 
-move :: Move -> Aut (Cube3X3 a)
+-- | Perform a move.
+move :: Move -> Aut (RubiksCube a)
 move D  = moveD
 move D' = from moveD
 move U  = moveU
@@ -351,32 +377,43 @@ move F' = from moveF
 move B  = moveB
 move B' = from moveB
 
-doMoves :: [Move] -> Aut (Cube3X3 a)
+-- | Perform a list of moves.
+doMoves :: [Move] -> Aut (RubiksCube a)
 doMoves [] = iso id id
 doMoves (m:ms) = move m . doMoves ms
 
-undoMoves :: [Move] -> Aut (Cube3X3 a)
+-- | Undo the actions of a list of moves.
+undoMoves :: [Move] -> Aut (RubiksCube a)
 undoMoves = from . doMoves
 
-upLayer :: Traversal' (Cube3X3 a) a
-upLayer f =
-  cube $ \cube ->
-    (\upSide' upRows' -> cube & upSide .~ upSide' & upRows .~ upRows')
-       <$> (traverse f (cube ^. upSide))
-       <*> (traverse (traverse f) (cube ^. upRows))
+-- | The 21=4*3+9 facets in the top layer.
+topLayerFacets :: Traversal' (RubiksCube a) a
+topLayerFacets f =
+  cube $ \c ->
+    (\upSide' upRows' -> c & upSide .~ upSide' & upRows .~ upRows')
+       <$> (traverse f (c ^. upSide))
+       <*> (traverse (traverse f) (c ^. upRows))
 
-middleLayer :: Traversal' (Cube3X3 a) a
-middleLayer = cube.middleRows.traverse.traverse
+-- | The 12=4*3 facets in the middle layer.
+middleLayerFacets :: Traversal' (RubiksCube a) a
+middleLayerFacets = cube.middleRows.traverse.traverse
 
-downLayer :: Traversal' (Cube3X3 a) a
-downLayer f =
-  cube $ \cube ->
-    (\downSide' downRows' -> cube & downSide .~ downSide' & downRows .~ downRows')
-       <$> (traverse f (cube ^. downSide))
-       <*> (traverse (traverse f) (cube ^. downRows))
+-- | The 21=4*3+9 facets in the bottom layer.
+bottomLayerFacets :: Traversal' (RubiksCube a) a
+bottomLayerFacets f =
+  cube $ \c ->
+    (\downSide' downRows' -> c & downSide .~ downSide' & downRows .~ downRows')
+       <$> (traverse f (c ^. downSide))
+       <*> (traverse (traverse f) (c ^. downRows))
 
-centerFields :: Traversal' (Cube3X3 a) a
-centerFields = cube.traverse.middleCenter
+-- | The six facets that are the center of their side.
+centerFacets :: Traversal' (RubiksCube a) a
+centerFacets = cube.traverse.middleCenter
 
-cornerFields :: Traversal' (Cube3X3 a) a
-cornerFields = cube.traverse.sideCorners
+-- | The 24=6*4=8*3 corner facets.
+cornerFacets :: Traversal' (RubiksCube a) a
+cornerFacets = cube.traverse.sideCorners
+
+-- | The 24=6*4=12*2 edge facets.
+edgeFacets :: Traversal' (RubiksCube a) a
+edgeFacets = cube.traverse.sideEdges
