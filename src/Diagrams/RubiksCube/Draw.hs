@@ -1,9 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ConstraintKinds #-}
 
 module Diagrams.RubiksCube.Draw
-  ( solvedRubiksCube
+  ( RubiksCubeBackend
+  , solvedRubiksCube
   , drawSide
   , drawFoldingPattern
   , Offsets (..), offsetX, offsetY
@@ -17,11 +20,12 @@ import Diagrams.RubiksCube.Move (Move (..))
 import Diagrams.RubiksCube.Model
 
 import Control.Lens hiding ((#))
-import Diagrams.Prelude hiding (center)
+import Diagrams.Prelude hiding (center, cube)
 import Data.List (sortBy, mapAccumL)
 import Data.Function (on)
 import qualified Diagrams.Prelude as P
-import Data.Default.Class
+
+type RubiksCubeBackend b = (Renderable (Path V2 Double) b, N b ~ Double, V b ~ V2)
 
 -- > import Diagrams.RubiksCube.Draw
 -- > solvedCube = drawFoldingPattern solvedRubiksCube
@@ -52,11 +56,11 @@ solvedRubiksCube = RubiksCube (Cube f b l r u d)
 --
 -- <<diagrams/src_Diagrams_RubiksCube_Draw_drawSideDia.svg#diagram=drawSideDia&height=150&width=200>>
 drawSide
-  :: Renderable (Path R2) b
-  => R2 -- ^ dx
-  -> R2 -- ^ dy
+  :: RubiksCubeBackend b
+  => V2 Double -- ^ dx
+  -> V2 Double -- ^ dy
   -> Side (Colour Double)
-  -> Diagram b R2
+  -> Diagram b
 drawSide dx dy side = mconcat $ do
   (y, row) <- count rows
   let Vec3 l c r = side ^. row
@@ -64,8 +68,11 @@ drawSide dx dy side = mconcat $ do
   where
     count = zip [(0 :: Int)..]
     rows = [bottomRow, middleRow, topRow]
-    pos x y = p2 $ unr2 $ fromIntegral x *^ dx ^+^ fromIntegral y *^ dy
-    drawField :: Renderable (Path R2) b => Int -> Int -> Colour Double -> Diagram b R2
+    pos :: Int -> Int -> Point V2 Double
+    pos x y = P $ fromIntegral x *^ dx ^+^ fromIntegral y *^ dy
+    drawField
+      :: (Renderable (Path V2 Double) b, N b ~ Double, V b ~ V2)
+      => Int -> Int -> Colour Double -> Diagram b
     drawField x y color =
       fromVertices [pos x y, pos (x+1) y, pos (x+1) (y+1), pos x (y+1), pos x y]
         # mapLoc closeTrail # trailLike # fc color
@@ -73,9 +80,9 @@ drawSide dx dy side = mconcat $ do
 -- | Draw the folding pattern of the cube. The front side is at the center of
 -- the pattern.
 drawFoldingPattern
-  :: Renderable (Path R2) b
+  :: RubiksCubeBackend b
   => RubiksCube (Colour Double)
-  -> Diagram b R2
+  -> Diagram b
 drawFoldingPattern c' =
   let c = c' ^. cube
       drawSide' = drawSide (r2 (1,0)) (r2 (0,1))
@@ -126,10 +133,10 @@ instance Default Offsets where
 -- >   let c = solvedRubiksCube ^. undoMoves [R,U,R',U']
 -- >   in drawRubiksCube with c
 drawRubiksCube
-  :: Renderable (Path R2) b
+  :: RubiksCubeBackend b
   => Offsets
   -> RubiksCube (Colour Double)
-  -> Diagram b R2
+  -> Diagram b
 drawRubiksCube (Offsets dx dy) c' = position $
   [ f ] ++
   sides ++
@@ -153,18 +160,18 @@ drawRubiksCube (Offsets dx dy) c' = position $
     d = (p2 (3*dx, 3*dy), drawSide' dx' (-dz') downSide)
 
 moveArrow
-  :: Renderable (Path R2) b
-  => Bool -> P2 -> P2 -> Diagram b R2
+  :: RubiksCubeBackend b
+  => Bool -> P2 Double -> P2 Double -> Diagram b
 moveArrow rev s e =
   (if rev then arrowBetween' opts e s else arrowBetween' opts s e) # lc red
   where opts = with & shaftStyle %~ lw ultraThick & headLength .~ veryLarge
 
 drawMoveU, drawMoveD, drawMoveL, drawMoveR, drawMoveF
-  :: Renderable (Path R2) b
+  :: RubiksCubeBackend b
   => Bool -- ^ invert
   -> Offsets
   -> RubiksCube (Colour Double)
-  -> Diagram b R2
+  -> Diagram b
 drawMoveU rev off c =
   atop (moveArrow rev (p2 (2.8, 2.5)) (p2 (0.2, 2.5)))
        (drawRubiksCube off c)
@@ -178,13 +185,13 @@ drawMoveR rev off c =
   atop (moveArrow rev (p2 (2.5, 0.2)) (p2 (2.5, 2.8)))
        (drawRubiksCube off c)
 drawMoveF rev off c =
-  arr (opts & arrowShaft .~ quarterTurn) (p2 (1.5, 2.6)) (p2 (2.5, 1.3))
+  arr (opts & arrowShaft .~ quarterTurn') (p2 (1.5, 2.6)) (p2 (2.5, 1.3))
   `atop`
-  arr (opts & arrowShaft .~ quarterTurn) (p2 (1.5, 0.4)) (p2 (0.5, 1.7))
+  arr (opts & arrowShaft .~ quarterTurn') (p2 (1.5, 0.4)) (p2 (0.5, 1.7))
   `atop`
   drawRubiksCube off c
   where
-    quarterTurn = arc (0 @@ turn) (1/4 @@ turn) # (if rev then id else reverseTrail)
+    quarterTurn' = arc xDir (1/4 @@ turn) # (if rev then id else reverseTrail)
     opts = with & shaftStyle %~ lw ultraThick & headLength .~ veryLarge
     arr opts' s e = (if rev then arrowBetween' opts' e s else arrowBetween' opts' s e)
                    # lc red
@@ -200,11 +207,11 @@ drawMoveF rev off c =
 -- >   let c = solvedRubiksCube ^. undoMoves [L,U,L',U']
 -- >   in drawMove L with c
 drawMove
-  :: Renderable (Path R2) b
+  :: RubiksCubeBackend b
   => Move
   -> Offsets
   -> RubiksCube (Colour Double)
-  -> Diagram b R2
+  -> Diagram b
 drawMove U  = drawMoveU False
 drawMove U' = drawMoveU True
 drawMove D  = drawMoveD False
@@ -241,11 +248,11 @@ instance Default MovesSettings where
 -- >       settings = with & showStart .~ True
 -- >   in drawMoves settings startPos moves
 drawMoves
-  :: Renderable (Path R2) b
+  :: RubiksCubeBackend b
   => MovesSettings
   -> RubiksCube (Colour Double) -- ^ the start configuration
   -> [Move]
-  -> Diagram b R2
+  -> Diagram b
 drawMoves settings c moves =
   let ((j, c'), ps) = mapAccumL iter (0 :: Int, c) moves
       allCubes = (if settings ^. showStart then ((pos ((-1) :: Int), drawRubiksCube off c) :) else id) $
@@ -269,10 +276,10 @@ drawMoves settings c moves =
 -- >       settings = with & showStart .~ True
 -- >   in drawMovesBackward settings endPos moves
 drawMovesBackward
-  :: Renderable (Path R2) b
+  :: RubiksCubeBackend b
   => MovesSettings
   -> RubiksCube (Colour Double) -- ^ the end configuration
   -> [Move]
-  -> Diagram b R2
+  -> Diagram b
 drawMovesBackward settings c moves =
   drawMoves settings (c ^. undoMoves moves) moves
