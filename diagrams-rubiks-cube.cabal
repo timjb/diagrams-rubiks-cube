@@ -10,7 +10,7 @@ maintainer:          tim@timbaumann.info
 copyright:           2015 Tim Baumann
 category:            Graphics
 build-type:          Simple
-extra-source-files:  README.md, diagrams/*.svg
+extra-source-files:  README.md, CHANGELOG.md, diagrams/*.svg
 extra-doc-files:     diagrams/*.svg
 cabal-version:       >= 1.10
 
