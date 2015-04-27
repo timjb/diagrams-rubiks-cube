@@ -18,4 +18,4 @@ See the docs on [Hackage][hackage-url].
 [hackage-image]: https://img.shields.io/hackage/v/diagrams-rubiks-cube.svg?style=flat
 [hackage-url]: http://hackage.haskell.org/package/diagrams-rubiks-cube
 [hackage-deps-image]: https://img.shields.io/hackage-deps/v/diagrams-rubiks-cube.svg?style=flat
-[hackage-deps-url]: http://packdeps.haskellers.com/feed?needle=diagrams-rubiks-cube.svg
+[hackage-deps-url]: http://packdeps.haskellers.com/feed?needle=diagrams-rubiks-cube
