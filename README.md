@@ -1,4 +1,6 @@
-# diagrams-rubiks-cube [![Hackage version][hackage-image]][hackage-url] [![Hackage dependencies][hackage-deps-image]][hackage-deps-url]
+# diagrams-rubiks-cube
+
+[![Hackage version][hackage-image]][hackage-url] [![Hackage dependencies][hackage-deps-image]][hackage-deps-url] [![Travis Status][travis-image]][travis-url]
 
 Haskell library for drawing the Rubik's Cube.
 
@@ -14,6 +16,8 @@ $ cabal install diagrams-rubiks-cube
 
 See the docs on [Hackage][hackage-url].
 
+[travis-image]: https://travis-ci.org/timjb/diagrams-rubiks-cube.svg?branch=master
+[travis-url]: https://travis-ci.org/timjb/diagrams-rubiks-cube
 [moves-image]: https://cdn.rawgit.com/timjb/diagrams-rubiks-cube/master/diagrams/src_Diagrams_RubiksCube_Draw_drawMovesExample.svg
 [hackage-image]: https://img.shields.io/hackage/v/diagrams-rubiks-cube.svg?style=flat
 [hackage-url]: http://hackage.haskell.org/package/diagrams-rubiks-cube
