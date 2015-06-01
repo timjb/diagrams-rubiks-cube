@@ -28,6 +28,7 @@ import qualified Diagrams.Prelude as P
 
 type RubiksCubeBackend n b = (Renderable (Path V2 n) b, TypeableFloat n, N b ~ n, V b ~ V2)
 
+-- > {-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 -- > import Diagrams.RubiksCube.Draw
 -- > solvedCube = drawFoldingPattern solvedRubiksCube
 
@@ -44,6 +45,7 @@ solvedRubiksCube = RubiksCube (Cube f b l r u d)
     u = pure green
     d = pure blue
 
+-- > {-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 -- > import Diagrams.RubiksCube
 -- > drawSideDia =
 -- >   let side = drawSide (r2 (1,0)) (r2 (0,1)) (pure yellow & topLeft .~ green)
@@ -96,6 +98,7 @@ drawFoldingPattern c' =
        , drawSide' (c ^. backSide)
        ]
 
+-- > {-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 -- > import Diagrams.RubiksCube
 -- > offsetsDia =
 -- >   let off = Offsets 2 1
@@ -128,6 +131,7 @@ instance Fractional n => Default (Offsets n) where
 --
 -- <<diagrams/src_Diagrams_RubiksCube_Draw_drawCubeExample.svg#diagram=drawCubeExample&height=150&width=150>>
 --
+-- > {-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 -- > import Diagrams.RubiksCube
 -- > import Control.Lens
 -- > drawCubeExample =
@@ -202,6 +206,7 @@ drawMoveF rev off c =
 --
 -- <<diagrams/src_Diagrams_RubiksCube_Draw_drawMoveExample.svg#diagram=drawMoveExample&height=150&width=150>>
 --
+-- > {-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 -- > import Diagrams.RubiksCube
 -- > import Control.Lens
 -- > drawMoveExample =
@@ -242,6 +247,7 @@ instance Fractional n => Default (MovesSettings n) where
 --
 -- <<diagrams/src_Diagrams_RubiksCube_Draw_drawMovesExample.svg#diagram=drawMovesExample&height=100&width=600>>
 --
+-- > {-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 -- > import Diagrams.RubiksCube
 -- > import Control.Lens
 -- > drawMovesExample =
