@@ -3,6 +3,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Diagrams.RubiksCube.Draw
   ( RubiksCubeBackend
@@ -25,7 +26,7 @@ import Data.List (sortBy, mapAccumL)
 import Data.Function (on)
 import qualified Diagrams.Prelude as P
 
-type RubiksCubeBackend b = (Renderable (Path V2 Double) b, N b ~ Double, V b ~ V2)
+type RubiksCubeBackend n b = (Renderable (Path V2 n) b, TypeableFloat n, N b ~ n, V b ~ V2)
 
 -- > import Diagrams.RubiksCube.Draw
 -- > solvedCube = drawFoldingPattern solvedRubiksCube
@@ -56,22 +57,22 @@ solvedRubiksCube = RubiksCube (Cube f b l r u d)
 --
 -- <<diagrams/src_Diagrams_RubiksCube_Draw_drawSideDia.svg#diagram=drawSideDia&height=150&width=200>>
 drawSide
-  :: RubiksCubeBackend b
-  => V2 Double -- ^ dx
-  -> V2 Double -- ^ dy
+  :: RubiksCubeBackend n b
+  => V2 n -- ^ dx
+  -> V2 n -- ^ dy
   -> Side (Colour Double)
   -> Diagram b
-drawSide dx dy side = mconcat $ do
+drawSide (dx :: V2 n) dy side = mconcat $ do
   (y, row) <- count rows
   let Vec3 l c r = side ^. row
   [drawField 0 y l, drawField 1 y c, drawField 2 y r]
   where
     count = zip [(0 :: Int)..]
     rows = [bottomRow, middleRow, topRow]
-    pos :: Int -> Int -> Point V2 Double
+    pos :: Int -> Int -> Point V2 n
     pos x y = P $ fromIntegral x *^ dx ^+^ fromIntegral y *^ dy
     drawField
-      :: (Renderable (Path V2 Double) b, N b ~ Double, V b ~ V2)
+      :: (RealFloat n, Renderable (Path V2 n) b, N b ~ n, V b ~ V2)
       => Int -> Int -> Colour Double -> Diagram b
     drawField x y color =
       fromVertices [pos x y, pos (x+1) y, pos (x+1) (y+1), pos x (y+1), pos x y]
@@ -80,7 +81,7 @@ drawSide dx dy side = mconcat $ do
 -- | Draw the folding pattern of the cube. The front side is at the center of
 -- the pattern.
 drawFoldingPattern
-  :: RubiksCubeBackend b
+  :: RubiksCubeBackend n b
   => RubiksCube (Colour Double)
   -> Diagram b
 drawFoldingPattern c' =
@@ -113,14 +114,14 @@ drawFoldingPattern c' =
 -- >   in mconcat [c, oxArrow, oxLabel, oyArrow, oyLabel, lines] # pad 1.1
 
 -- | <<diagrams/src_Diagrams_RubiksCube_Draw_offsetsDia.svg#diagram=offsetsDia&height=200&width=200>>
-data Offsets =
-  Offsets { _offsetX :: Double
-          , _offsetY :: Double
+data Offsets n =
+  Offsets { _offsetX :: n
+          , _offsetY :: n
           } deriving (Show, Eq, Read)
 
 makeLenses ''Offsets
 
-instance Default Offsets where
+instance Fractional n => Default (Offsets n) where
   def = Offsets 0.3 0.35
 
 -- | Draw the Rubik's cube in parallel perspective.
@@ -133,8 +134,8 @@ instance Default Offsets where
 -- >   let c = solvedRubiksCube ^. undoMoves [R,U,R',U']
 -- >   in drawRubiksCube with c
 drawRubiksCube
-  :: RubiksCubeBackend b
-  => Offsets
+  :: RubiksCubeBackend n b
+  => Offsets n
   -> RubiksCube (Colour Double)
   -> Diagram b
 drawRubiksCube (Offsets dx dy) c' = position $
@@ -160,16 +161,16 @@ drawRubiksCube (Offsets dx dy) c' = position $
     d = (p2 (3*dx, 3*dy), drawSide' dx' (-dz') downSide)
 
 moveArrow
-  :: RubiksCubeBackend b
-  => Bool -> P2 Double -> P2 Double -> Diagram b
+  :: RubiksCubeBackend n b
+  => Bool -> P2 n -> P2 n -> Diagram b
 moveArrow rev s e =
   (if rev then arrowBetween' opts e s else arrowBetween' opts s e) # lc red
   where opts = with & shaftStyle %~ lw ultraThick & headLength .~ veryLarge
 
 drawMoveU, drawMoveD, drawMoveL, drawMoveR, drawMoveF
-  :: RubiksCubeBackend b
+  :: RubiksCubeBackend n b
   => Bool -- ^ invert
-  -> Offsets
+  -> Offsets n
   -> RubiksCube (Colour Double)
   -> Diagram b
 drawMoveU rev off c =
@@ -207,9 +208,9 @@ drawMoveF rev off c =
 -- >   let c = solvedRubiksCube ^. undoMoves [L,U,L',U']
 -- >   in drawMove L with c
 drawMove
-  :: RubiksCubeBackend b
+  :: RubiksCubeBackend n b
   => Move
-  -> Offsets
+  -> Offsets n
   -> RubiksCube (Colour Double)
   -> Diagram b
 drawMove U  = drawMoveU False
@@ -222,18 +223,19 @@ drawMove R  = drawMoveR False
 drawMove R' = drawMoveR True
 drawMove F  = drawMoveF False
 drawMove F' = drawMoveF True
-drawMove _  = error "can't draw back moves!"
+drawMove B  = drawMoveB False
+drawMove B' = drawMoveB True
 
-data MovesSettings =
-  MovesSettings { _moveSep :: Double -- ^ space between cubes
+data MovesSettings n =
+  MovesSettings { _moveSep :: n -- ^ space between cubes
                 , _showStart :: Bool -- ^ show the start configuration?
                 , _showEnd :: Bool -- ^ show the end configuration?
-                , _offsets :: Offsets
+                , _offsets :: Offsets n
                 } deriving (Eq, Show, Read)
 
 makeLenses ''MovesSettings
 
-instance Default MovesSettings where
+instance Fractional n => Default (MovesSettings n) where
   def = MovesSettings 1.75 False True def
 
 -- | Draws a sequence of moves.
@@ -248,8 +250,8 @@ instance Default MovesSettings where
 -- >       settings = with & showStart .~ True
 -- >   in drawMoves settings startPos moves
 drawMoves
-  :: RubiksCubeBackend b
-  => MovesSettings
+  :: RubiksCubeBackend n b
+  => MovesSettings n
   -> RubiksCube (Colour Double) -- ^ the start configuration
   -> [Move]
   -> Diagram b
@@ -276,8 +278,8 @@ drawMoves settings c moves =
 -- >       settings = with & showStart .~ True
 -- >   in drawMovesBackward settings endPos moves
 drawMovesBackward
-  :: RubiksCubeBackend b
-  => MovesSettings
+  :: RubiksCubeBackend n b
+  => MovesSettings n
   -> RubiksCube (Colour Double) -- ^ the end configuration
   -> [Move]
   -> Diagram b
