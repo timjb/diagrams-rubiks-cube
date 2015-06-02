@@ -22,6 +22,8 @@ import Diagrams.RubiksCube.Model
 
 import Control.Lens hiding ((#))
 import Diagrams.Prelude hiding (center, cube)
+import Diagrams.TwoD.Arrow (arrowFromLocatedTrail')
+import Diagrams.Trail (trailPoints)
 import Data.List (sortBy, mapAccumL)
 import Data.Function (on)
 import qualified Diagrams.Prelude as P
@@ -166,28 +168,32 @@ drawRubiksCube (Offsets dx dy) c' = position $
 
 moveArrow
   :: RubiksCubeBackend n b
-  => Bool -> P2 n -> P2 n -> Diagram b
-moveArrow rev s e =
-  (if rev then arrowBetween' opts e s else arrowBetween' opts s e) # lc red
-  where opts = with & shaftStyle %~ lw ultraThick & headLength .~ veryLarge
+  => Bool -> [P2 n] -> Diagram b
+moveArrow rev points =
+  lc red $ arrowFromLocatedTrail' opts $ fromVertices $
+    if rev then reverse points else points
+  where opts = with & shaftStyle %~ lw ultraThick
+                    & headLength .~ veryLarge
+                    & tailLength .~ veryLarge
+                    & arrowTail .~ lineTail
 
-drawMoveU, drawMoveD, drawMoveL, drawMoveR, drawMoveF
+drawMoveU, drawMoveD, drawMoveL, drawMoveR, drawMoveF, drawMoveB
   :: RubiksCubeBackend n b
   => Bool -- ^ invert
   -> Offsets n
   -> RubiksCube (Colour Double)
   -> Diagram b
 drawMoveU rev off c =
-  atop (moveArrow rev (p2 (2.8, 2.5)) (p2 (0.2, 2.5)))
+  atop (moveArrow rev [p2 (2.8, 2.5), p2 (0.2, 2.5)])
        (drawRubiksCube off c)
 drawMoveD rev (Offsets dx dy) c =
-  atop (moveArrow rev (p2 (0.2, 0.5)) (p2 (2.8, 0.5)))
+  atop (moveArrow rev [p2 (0.2, 0.5), p2 (2.8, 0.5)])
        (drawRubiksCube (Offsets dx (-dy)) c)
-drawMoveL rev (Offsets dx dy) c =
-  atop (moveArrow rev (p2 (0.5, 2.8)) (p2 (0.5, 0.2)))
-       (drawRubiksCube (Offsets dx dy) c)
+drawMoveL rev off c =
+  atop (moveArrow rev [p2 (0.5, 2.8), p2 (0.5, 0.2)])
+       (drawRubiksCube off c)
 drawMoveR rev off c =
-  atop (moveArrow rev (p2 (2.5, 0.2)) (p2 (2.5, 2.8)))
+  atop (moveArrow rev [p2 (2.5, 0.2), p2 (2.5, 2.8)])
        (drawRubiksCube off c)
 drawMoveF rev off c =
   arr (opts & arrowShaft .~ quarterTurn') (p2 (1.5, 2.6)) (p2 (2.5, 1.3))
@@ -200,6 +206,13 @@ drawMoveF rev off c =
     opts = with & shaftStyle %~ lw ultraThick & headLength .~ veryLarge
     arr opts' s e = (if rev then arrowBetween' opts' e s else arrowBetween' opts' s e)
                    # lc red
+drawMoveB rev off@(Offsets dx dy) c =
+  moveArrow rev (trailPoints arrowTrail)
+  `atop`
+  drawRubiksCube off c
+  where backOff = p2 (3.3 + 3 * dx, 0.2 + 3 * dy)
+        arrowOffsets = [(0 ^& 3.1), ((-3.1) ^& 0)]
+        arrowTrail = P.at (fromOffsets arrowOffsets) backOff
 
 -- | Draw the Rubik's cube in parallel perspective with an arrow indicating the
 -- next move. If the the bottom layer is moved, the cube will be shown from below.
@@ -251,7 +264,7 @@ instance Fractional n => Default (MovesSettings n) where
 -- > import Diagrams.RubiksCube
 -- > import Control.Lens
 -- > drawMovesExample =
--- >   let moves = [R, F', R', D', F, F]
+-- >   let moves = [B, R, F', R', D', F, F]
 -- >       startPos = solvedRubiksCube ^. undoMoves moves
 -- >       settings = with & showStart .~ True
 -- >   in drawMoves settings startPos moves
@@ -279,7 +292,7 @@ drawMoves settings c moves =
 -- > import Diagrams.RubiksCube
 -- > import Control.Lens
 -- > drawMovesExample' =
--- >   let moves = [R, F', R', D', F, F]
+-- >   let moves = [B, R, F', R', D', F, F]
 -- >       endPos = solvedRubiksCube
 -- >       settings = with & showStart .~ True
 -- >   in drawMovesBackward settings endPos moves
