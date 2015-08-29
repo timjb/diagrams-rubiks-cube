@@ -4,3 +4,4 @@ cabal.config
 dist
 .diagrams-cache
 .DS_Store
+.stack-work
