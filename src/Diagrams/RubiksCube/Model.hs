@@ -3,6 +3,10 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Diagrams.RubiksCube.Model (
   -- * Constructing cubes
@@ -35,9 +39,38 @@ import Control.Lens
 import Diagrams.RubiksCube.Move (Move (..))
 import Data.Foldable (Foldable)
 import Control.Applicative (Applicative (..), (<$>))
+import Data.Distributive (Distributive (..))
+import Data.Functor.Rep (Representable (..), distributeRep, tabulated)
 
 -- | The type of automorphisms
 type Aut a = Iso' a a
+
+-- Natural numbers
+data N = Z | S N
+
+-- Some type synonyms for natural numbers
+type Zero = 'Z
+type One = 'S Zero
+type Two = 'S One
+type Three = 'S Two
+type Four = 'S Three
+
+-- | Finite type with n inhabitants
+data Fin :: N -> * where
+  FinZ :: Fin ('S n)
+  FinS :: Fin n -> Fin ('S n)
+
+zero :: Fin ('S n)
+zero = FinZ
+
+one :: Fin ('S ('S n))
+one = FinS zero
+
+two :: Fin ('S ('S ('S n)))
+two = FinS one
+
+three :: Fin ('S ('S ('S ('S n))))
+three = FinS two
 
 -- | A list of fixed length 3.
 data Vec3 a = Vec3 a a a deriving (Show, Eq, Functor, Foldable, Traversable)
@@ -50,6 +83,26 @@ instance Applicative Vec3 where
 instance Reversing (Vec3 a) where
   reversing (Vec3 a b c) = Vec3 c b a
 
+instance Distributive Vec3 where
+  distribute = distributeRep
+
+instance Representable Vec3 where
+  type Rep Vec3 = Fin Three
+  tabulate f = Vec3 (f zero) (f one) (f two)
+  index (Vec3 a b c) fin =
+    case fin of
+      FinZ -> a
+      FinS FinZ -> b
+      FinS (FinS FinZ) -> c
+      _ -> error "index@Vec3: cannot happen"
+
+-- | A variant of 'inside' that works for
+insideRep
+  :: Representable g
+  => Lens s t a b
+  -> Lens (g s) (g t) (g a) (g b)
+insideRep l = from tabulated . inside l . tabulated
+
 -- | A list of fixed length 4.
 data Vec4 a = Vec4 a a a a deriving (Show, Eq, Functor, Foldable, Traversable)
 
@@ -57,6 +110,20 @@ instance Applicative Vec4 where
   pure v = Vec4 v v v v
   Vec4 f1 f2 f3 f4 <*> Vec4 v1 v2 v3 v4 =
     Vec4 (f1 v1) (f2 v2) (f3 v3) (f4 v4)
+
+instance Distributive Vec4 where
+  distribute = distributeRep
+
+instance Representable Vec4 where
+  type Rep Vec4 = Fin Four
+  tabulate f = Vec4 (f zero) (f one) (f two) (f three)
+  index (Vec4 a b c d) fin =
+    case fin of
+      FinZ -> a
+      FinS FinZ -> b
+      FinS (FinS FinZ) -> c
+      FinS (FinS (FinS FinZ)) -> d
+      _ -> error "index@Vec4: cannot happen"
 
 cycRight :: Vec4 a -> Vec4 a
 cycRight (Vec4 a b c d) = Vec4 d a b c
@@ -274,14 +341,15 @@ rotateCCW = from rotateCW
 type RowsLens a = Lens' (Cube (Side a)) (Vec4 (Vec3 a))
 type ColsLens a = Lens' (Cube (Side a)) (Vec4 (Vec3 a))
 
-horizontalRows :: Lens' (Side a) (Vec3 a) -> RowsLens a
-horizontalRows rowLens = lens getter setter
+horizontalSides :: Lens' (Cube a) (Vec4 a)
+horizontalSides = lens getter setter
   where
-    getter (Cube f b l r _u _d) =
-      fmap (view rowLens) (Vec4 f r b l)
-    setter (Cube f b l r u d) (Vec4 f' r' b' l') =
-      Cube (set rowLens f' f) (set rowLens b' b)
-           (set rowLens l' l) (set rowLens r' r) u d
+    getter (Cube f b l r _u _d) = Vec4 f r b l
+    setter (Cube _f _b _l _r u d) (Vec4 f' r' b' l') =
+            Cube f' b' l' r' u d
+
+horizontalRows :: Lens' (Side a) (Vec3 a) -> RowsLens a
+horizontalRows rowLens = horizontalSides . insideRep rowLens
 
 upRows :: RowsLens a
 upRows = horizontalRows topRow
