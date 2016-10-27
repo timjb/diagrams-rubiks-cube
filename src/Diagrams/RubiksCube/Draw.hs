@@ -76,7 +76,7 @@ drawSide (dx :: V2 n) dy side = mconcat $ do
     pos :: Int -> Int -> Point V2 n
     pos x y = P $ fromIntegral x *^ dx ^+^ fromIntegral y *^ dy
     drawField
-      :: (RealFloat n, Renderable (Path V2 n) b, N b ~ n, V b ~ V2)
+      :: (Renderable (Path V2 n) b, N b ~ n, V b ~ V2)
       => Int -> Int -> Colour Double -> Diagram b
     drawField x y color =
       fromVertices [pos x y, pos (x+1) y, pos (x+1) (y+1), pos x (y+1), pos x y]
