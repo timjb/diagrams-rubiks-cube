@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.2.0.1 - 2016-10-27
+
+- Updated upper bounds
+
 ## 0.2.0.0 - 2015-06-01
 
 - Generalized numeric type `n` in `Diagrams.RubiksCube.Draw` (from `Double`)
