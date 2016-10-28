@@ -61,10 +61,10 @@ solvedRubiksCube = RubiksCube (Cube f b l r u d)
 --
 -- <<diagrams/src_Diagrams_RubiksCube_Draw_drawSideDia.svg#diagram=drawSideDia&height=150&width=200>>
 drawSide
-  :: RubiksCubeBackend n b
+  :: (RubiksCubeBackend n b, Color c)
   => V2 n -- ^ dx
   -> V2 n -- ^ dy
-  -> Side (Colour Double)
+  -> Side c
   -> Diagram b
 drawSide (dx :: V2 n) dy side = mconcat $ do
   (y, row) <- count rows
@@ -76,17 +76,17 @@ drawSide (dx :: V2 n) dy side = mconcat $ do
     pos :: Int -> Int -> Point V2 n
     pos x y = P $ fromIntegral x *^ dx ^+^ fromIntegral y *^ dy
     drawField
-      :: (Renderable (Path V2 n) b, N b ~ n, V b ~ V2)
-      => Int -> Int -> Colour Double -> Diagram b
+      :: (Renderable (Path V2 n) b, N b ~ n, V b ~ V2, Color c)
+      => Int -> Int -> c -> Diagram b
     drawField x y color =
       fromVertices [pos x y, pos (x+1) y, pos (x+1) (y+1), pos x (y+1), pos x y]
-        # mapLoc closeTrail # trailLike # fc color
+        # mapLoc closeTrail # trailLike # fillColor color
 
 -- | Draw the folding pattern of the cube. The front side is at the center of
 -- the pattern.
 drawFoldingPattern
-  :: RubiksCubeBackend n b
-  => RubiksCube (Colour Double)
+  :: (RubiksCubeBackend n b, Color c)
+  => RubiksCube c
   -> Diagram b
 drawFoldingPattern c' =
   let c = c' ^. cube
@@ -140,9 +140,9 @@ instance Fractional n => Default (Offsets n) where
 -- >   let c = solvedRubiksCube ^. undoMoves [R,U,R',U']
 -- >   in drawRubiksCube with c
 drawRubiksCube
-  :: RubiksCubeBackend n b
+  :: (RubiksCubeBackend n b, Color c)
   => Offsets n
-  -> RubiksCube (Colour Double)
+  -> RubiksCube c
   -> Diagram b
 drawRubiksCube (Offsets dx dy) c' = position $
   [ f ] ++
@@ -178,10 +178,10 @@ moveArrow rev points =
                     & arrowTail .~ lineTail
 
 drawMoveU, drawMoveD, drawMoveL, drawMoveR, drawMoveF, drawMoveB
-  :: RubiksCubeBackend n b
+  :: (RubiksCubeBackend n b, Color c)
   => Bool -- ^ invert
   -> Offsets n
-  -> RubiksCube (Colour Double)
+  -> RubiksCube c
   -> Diagram b
 drawMoveU rev off c =
   atop (moveArrow rev [p2 (2.8, 2.5), p2 (0.2, 2.5)])
@@ -226,10 +226,10 @@ drawMoveB rev off@(Offsets dx dy) c =
 -- >   let c = solvedRubiksCube ^. undoMoves [L,U,L',U']
 -- >   in drawMove L with c
 drawMove
-  :: RubiksCubeBackend n b
+  :: (RubiksCubeBackend n b, Color c)
   => Move
   -> Offsets n
-  -> RubiksCube (Colour Double)
+  -> RubiksCube c
   -> Diagram b
 drawMove U  = drawMoveU False
 drawMove U' = drawMoveU True
@@ -269,9 +269,9 @@ instance Fractional n => Default (MovesSettings n) where
 -- >       settings = with & showStart .~ True
 -- >   in drawMoves settings startPos moves
 drawMoves
-  :: RubiksCubeBackend n b
+  :: (RubiksCubeBackend n b, Color c)
   => MovesSettings n
-  -> RubiksCube (Colour Double) -- ^ the start configuration
+  -> RubiksCube c -- ^ the start configuration
   -> [Move]
   -> Diagram b
 drawMoves settings c moves =
@@ -297,9 +297,9 @@ drawMoves settings c moves =
 -- >       settings = with & showStart .~ True
 -- >   in drawMovesBackward settings endPos moves
 drawMovesBackward
-  :: RubiksCubeBackend n b
+  :: (RubiksCubeBackend n b, Color c)
   => MovesSettings n
-  -> RubiksCube (Colour Double) -- ^ the end configuration
+  -> RubiksCube c -- ^ the end configuration
   -> [Move]
   -> Diagram b
 drawMovesBackward settings c moves =
