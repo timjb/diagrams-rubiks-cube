@@ -1,11 +1,13 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Diagrams.RubiksCube.Model (
@@ -73,7 +75,9 @@ three :: Fin ('S ('S ('S ('S n))))
 three = FinS two
 
 -- | A list of fixed length 3.
-data Vec3 a = Vec3 a a a deriving (Show, Eq, Functor, Foldable, Traversable)
+data Vec3 a
+  = Vec3 a a a
+  deriving (Show, Eq, Functor, Foldable, Traversable)
 
 instance Applicative Vec3 where
   pure v = Vec3 v v v
@@ -95,6 +99,15 @@ instance Representable Vec3 where
       FinS FinZ -> b
       FinS (FinS FinZ) -> c
       _ -> error "index@Vec3: cannot happen"
+      
+instance Field1 (Vec3 a) (Vec3 a) a a where
+  _1 f (Vec3 a b c) = (\a' -> Vec3 a' b c) <$> f a
+      
+instance Field2 (Vec3 a) (Vec3 a) a a where
+  _2 f (Vec3 a b c) = (\b' -> Vec3 a b' c) <$> f b
+      
+instance Field3 (Vec3 a) (Vec3 a) a a where
+  _3 f (Vec3 a b c) = (\c' -> Vec3 a b c') <$> f c
 
 -- | A variant of 'inside' that works for
 insideRep
