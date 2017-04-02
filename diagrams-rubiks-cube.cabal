@@ -7,7 +7,7 @@ license:             MIT
 license-file:        LICENSE
 author:              Tim Baumann
 maintainer:          tim@timbaumann.info
-copyright:           2015-2016 Tim Baumann
+copyright:           2015-2017 Tim Baumann
 category:            Graphics
 build-type:          Simple
 extra-source-files:  README.md, CHANGELOG.md, diagrams/*.svg

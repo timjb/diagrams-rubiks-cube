@@ -1,7 +1,5 @@
 flags: {}
 packages:
 - '.'
-extra-deps:
-- diagrams-lib-1.4
-- diagrams-core-1.4
-resolver: lts-7.5
+extra-deps: []
+resolver: lts-8.6
