@@ -42,12 +42,13 @@ type RubiksCubeBackend n b = (Renderable (Path V2 n) b, TypeableFloat n, N b ~ n
 solvedRubiksCube :: RubiksCube (Colour Double)
 solvedRubiksCube = RubiksCube (Cube f b l r u d)
   where
-    f = pure orange
-    b = pure red
+    -- colours from http://clrs.cc/
+    f = pure (sRGB24 255 133 27) -- orange
+    b = pure (sRGB24 255 65 54) -- red
     l = pure white
-    r = pure yellow
-    u = pure green
-    d = pure blue
+    r = pure (sRGB24 255 220 0) -- yellow
+    u = pure (sRGB24 61 153 112) -- olive
+    d = pure (sRGB24 0 116 217) -- blue
 
 -- > {-# LANGUAGE FlexibleContexts, TypeFamilies #-}
 -- > import Diagrams.RubiksCube
