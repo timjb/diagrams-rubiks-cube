@@ -4,6 +4,7 @@
 
 - Remove artefacts caused by square line joins
 - Proper arrow scaling
+- Shorter arrows for back layer moves
 
 ## 0.2.0.1 - 2016-10-27
 

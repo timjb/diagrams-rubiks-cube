@@ -229,11 +229,11 @@ drawMoveF False off c =
     quarterTurn' = arc xDir (-0.25 @@ turn)
     arr s e = arrowBetween' arrOpts s e # lc red
 drawMoveB rev off@(Offsets dx dy) c =
-  moveArrow rev (trailPoints arrowTrail)
+    moveArrow rev (trailPoints arrowTrail)
   `atop`
-  drawRubiksCube off c
-  where backOff = p2 (3.3 + 3 * dx, 0.2 + 3 * dy)
-        arrowOffsets = [(0 ^& 3.1), ((-3.1) ^& 0)]
+    drawRubiksCube off c
+  where backOff = p2 (3.3 + 3 * dx, 1.2 + 3 * dy)
+        arrowOffsets = [(0 ^& 2.1), ((-2.1) ^& 0)]
         arrowTrail = P.at (fromOffsets arrowOffsets) backOff
 
 -- | Draw the Rubik's cube in parallel perspective with an arrow indicating the

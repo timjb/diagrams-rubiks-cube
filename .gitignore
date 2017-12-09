@@ -7,3 +7,5 @@ dist
 .stack-work
 *.o
 *.hi
+*.dyn_hi
+*.dyn_o
