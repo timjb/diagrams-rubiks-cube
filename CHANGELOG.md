@@ -1,6 +1,6 @@
 # Change Log
 
-## unreleased
+## 0.3.0.0 - 2017-12-09
 
 - Remove artefacts caused by square line joins
 - Proper arrow scaling
