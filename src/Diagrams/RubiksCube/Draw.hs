@@ -80,7 +80,11 @@ drawSide (dx :: V2 n) dy side = mconcat $ do
       => Int -> Int -> c -> Diagram b
     drawField x y color =
       fromVertices [pos x y, pos (x+1) y, pos (x+1) (y+1), pos x (y+1), pos x y]
-        # mapLoc closeTrail # trailLike # fillColor color
+        # mapLoc closeTrail
+        # trailLike
+        # fillColor color
+        # lineCap LineCapRound
+        # lineJoin LineJoinRound
 
 -- | Draw the folding pattern of the cube. The front side is at the center of
 -- the pattern.

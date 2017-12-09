@@ -1,5 +1,9 @@
 # Change Log
 
+## unreleased
+
+- Remove artefacts caused by square line joins
+
 ## 0.2.0.1 - 2016-10-27
 
 - Updated upper bounds
