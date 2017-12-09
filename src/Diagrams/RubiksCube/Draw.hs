@@ -85,6 +85,7 @@ drawSide (dx :: V2 n) dy side = mconcat $ do
       fromVertices [pos x y, pos (x+1) y, pos (x+1) (y+1), pos x (y+1), pos x y]
         # mapLoc closeTrail
         # trailLike
+        # lineColor (sRGB24 30 30 30)
         # fillColor color
         # lineCap LineCapRound
         # lineJoin LineJoinRound
