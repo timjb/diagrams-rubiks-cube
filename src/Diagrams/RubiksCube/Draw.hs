@@ -13,7 +13,7 @@ module Diagrams.RubiksCube.Draw
   , Offsets (..), offsetX, offsetY
   , drawRubiksCube
   , drawMove
-  , MovesSettings (..), moveSep, showStart, showEnd, offsets
+  , MovesSettings (..), moveSep, showStart, showEnd, offsets, arrowColour
   , drawMoves, drawMovesBackward
   ) where
 
@@ -185,31 +185,33 @@ moveArrowOptions =
 moveArrow
   :: RubiksCubeBackend n b
   => Bool
+  -> Colour Double
   -> [P2 n]
   -> Diagram b
-moveArrow rev points =
-  lc red $ arrowFromLocatedTrail' moveArrowOptions $ fromVertices $
+moveArrow rev arrColour points =
+  lc arrColour $ arrowFromLocatedTrail' moveArrowOptions $ fromVertices $
     if rev then reverse points else points
 
 drawMoveU, drawMoveD, drawMoveL, drawMoveR, drawMoveF, drawMoveB
   :: (RubiksCubeBackend n b, Color c)
   => Bool -- ^ invert
+  -> Colour Double
   -> Offsets n
   -> RubiksCube c
   -> Diagram b
-drawMoveU rev off c =
-  atop (moveArrow rev [p2 (2.8, 2.5), p2 (0.2, 2.5)])
+drawMoveU rev arrColour off c =
+  atop (moveArrow rev arrColour [p2 (2.8, 2.5), p2 (0.2, 2.5)])
        (drawRubiksCube off c)
-drawMoveD rev (Offsets dx dy) c =
-  atop (moveArrow rev [p2 (0.2, 0.5), p2 (2.8, 0.5)])
+drawMoveD rev arrColour (Offsets dx dy) c =
+  atop (moveArrow rev arrColour [p2 (0.2, 0.5), p2 (2.8, 0.5)])
        (drawRubiksCube (Offsets dx (-dy)) c)
-drawMoveL rev off c =
-  atop (moveArrow rev [p2 (0.5, 2.8), p2 (0.5, 0.2)])
+drawMoveL rev arrColour off c =
+  atop (moveArrow rev arrColour [p2 (0.5, 2.8), p2 (0.5, 0.2)])
        (drawRubiksCube off c)
-drawMoveR rev off c =
-  atop (moveArrow rev [p2 (2.5, 0.2), p2 (2.5, 2.8)])
+drawMoveR rev arrColour off c =
+  atop (moveArrow rev arrColour [p2 (2.5, 0.2), p2 (2.5, 2.8)])
        (drawRubiksCube off c)
-drawMoveF True off c =
+drawMoveF True arrColour off c =
     arr (p2 (0.5, 1.2)) (p2 (1.3, 2.5))
   `atop`
     arr (p2 (2.5, 1.8)) (p2 (1.7, 0.5))
@@ -218,8 +220,8 @@ drawMoveF True off c =
   where
     arrOpts = moveArrowOptions & arrowShaft .~ quarterTurn' & arrowTail .~ noTail
     quarterTurn' = arc xDir (0.25 @@ turn)
-    arr s e = arrowBetween' arrOpts e s # lc red
-drawMoveF False off c =
+    arr s e = arrowBetween' arrOpts e s # lc arrColour
+drawMoveF False arrColour off c =
     arr (p2 (1.7, 2.5)) (p2 (2.5, 1.2))
   `atop`
     arr (p2 (1.3, 0.5)) (p2 (0.5, 1.8))
@@ -228,9 +230,9 @@ drawMoveF False off c =
   where
     arrOpts = moveArrowOptions & arrowShaft .~ quarterTurn' & arrowTail .~ noTail
     quarterTurn' = arc xDir (-0.25 @@ turn)
-    arr s e = arrowBetween' arrOpts s e # lc red
-drawMoveB rev off@(Offsets dx dy) c =
-    moveArrow rev (trailPoints arrowTrail)
+    arr s e = arrowBetween' arrOpts s e # lc arrColour
+drawMoveB rev arrColour off@(Offsets dx dy) c =
+    moveArrow rev arrColour (trailPoints arrowTrail)
   `atop`
     drawRubiksCube off c
   where backOff = p2 (3.3 + 3 * dx, 1.2 + 3 * dy)
@@ -251,6 +253,7 @@ drawMoveB rev off@(Offsets dx dy) c =
 drawMove
   :: (RubiksCubeBackend n b, Color c)
   => Move
+  -> Colour Double
   -> Offsets n
   -> RubiksCube c
   -> Diagram b
@@ -272,12 +275,20 @@ data MovesSettings n =
                 , _showStart :: Bool -- ^ show the start configuration?
                 , _showEnd :: Bool -- ^ show the end configuration?
                 , _offsets :: Offsets n
+                , _arrowColour :: Colour Double
                 } deriving (Eq, Show, Read)
 
 makeLenses ''MovesSettings
 
 instance Fractional n => Default (MovesSettings n) where
-  def = MovesSettings 1.75 False True def
+  def =
+    MovesSettings
+    { _moveSep = 1.75
+    , _showStart = False
+    , _showEnd = True
+    , _offsets = def
+    , _arrowColour = sRGB24 0 31 63
+    }
 
 -- | Draws a sequence of moves.
 --
@@ -307,7 +318,7 @@ drawMoves settings c moves =
     pos i = p2 (fromIntegral i * (3 + settings ^. moveSep), 0)
     iter (i, c') m =
       let c'' = c' ^. move m
-      in ((i+1, c''), (pos i, drawMove m off c'))
+      in ((i+1, c''), (pos i, drawMove m (settings ^. arrowColour) off c'))
 
 -- | Like 'drawMoves', but takes the end configuration instead of the start
 -- configuration. The previous example can be simplified with this:
