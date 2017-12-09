@@ -3,6 +3,7 @@
 ## unreleased
 
 - Remove artefacts caused by square line joins
+- Proper arrow scaling
 
 ## 0.2.0.1 - 2016-10-27
 

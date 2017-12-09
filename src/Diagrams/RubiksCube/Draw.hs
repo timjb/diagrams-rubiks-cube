@@ -24,9 +24,11 @@ import Control.Lens hiding ((#))
 import Diagrams.Prelude hiding (center, cube)
 import Diagrams.TwoD.Arrow (arrowFromLocatedTrail')
 import Diagrams.Trail (trailPoints)
-import Data.List (sortBy, mapAccumL)
-import Data.Function (on)
 import qualified Diagrams.Prelude as P
+
+import Data.Function (on)
+import Data.List (sortBy, mapAccumL)
+import Data.Typeable (Typeable)
 
 type RubiksCubeBackend n b = (Renderable (Path V2 n) b, TypeableFloat n, N b ~ n, V b ~ V2)
 
@@ -170,16 +172,23 @@ drawRubiksCube (Offsets dx dy) c' = position $
     u = (p2 (0,3), drawSide' dx' dz' upSide)
     d = (p2 (3*dx, 3*dy), drawSide' dx' (-dz') downSide)
 
+moveArrowOptions :: (Num n, RealFloat n, Fractional n, Typeable n) => ArrowOpts n
+moveArrowOptions =
+  with
+    & shaftStyle %~ lw (local 0.35)
+    & headLength .~ local 0.6
+    & tailLength .~ local 0.6
+    & arrowHead  .~ tri
+    & arrowTail  .~ lineTail
+
 moveArrow
   :: RubiksCubeBackend n b
-  => Bool -> [P2 n] -> Diagram b
+  => Bool
+  -> [P2 n]
+  -> Diagram b
 moveArrow rev points =
-  lc red $ arrowFromLocatedTrail' opts $ fromVertices $
+  lc red $ arrowFromLocatedTrail' moveArrowOptions $ fromVertices $
     if rev then reverse points else points
-  where opts = with & shaftStyle %~ lw ultraThick
-                    & headLength .~ veryLarge
-                    & tailLength .~ veryLarge
-                    & arrowTail .~ lineTail
 
 drawMoveU, drawMoveD, drawMoveL, drawMoveR, drawMoveF, drawMoveB
   :: (RubiksCubeBackend n b, Color c)
@@ -199,17 +208,26 @@ drawMoveL rev off c =
 drawMoveR rev off c =
   atop (moveArrow rev [p2 (2.5, 0.2), p2 (2.5, 2.8)])
        (drawRubiksCube off c)
-drawMoveF rev off c =
-  arr (opts & arrowShaft .~ quarterTurn') (p2 (1.5, 2.6)) (p2 (2.5, 1.3))
+drawMoveF True off c =
+    arr (p2 (0.5, 1.2)) (p2 (1.3, 2.5))
   `atop`
-  arr (opts & arrowShaft .~ quarterTurn') (p2 (1.5, 0.4)) (p2 (0.5, 1.7))
+    arr (p2 (2.5, 1.8)) (p2 (1.7, 0.5))
   `atop`
-  drawRubiksCube off c
+    drawRubiksCube off c
   where
-    quarterTurn' = arc xDir (1/4 @@ turn) # (if rev then id else reverseTrail)
-    opts = with & shaftStyle %~ lw ultraThick & headLength .~ veryLarge
-    arr opts' s e = (if rev then arrowBetween' opts' e s else arrowBetween' opts' s e)
-                   # lc red
+    arrOpts = moveArrowOptions & arrowShaft .~ quarterTurn' & arrowTail .~ noTail
+    quarterTurn' = arc xDir (0.25 @@ turn)
+    arr s e = arrowBetween' arrOpts e s # lc red
+drawMoveF False off c =
+    arr (p2 (1.7, 2.5)) (p2 (2.5, 1.2))
+  `atop`
+    arr (p2 (1.3, 0.5)) (p2 (0.5, 1.8))
+  `atop`
+    drawRubiksCube off c
+  where
+    arrOpts = moveArrowOptions & arrowShaft .~ quarterTurn' & arrowTail .~ noTail
+    quarterTurn' = arc xDir (-0.25 @@ turn)
+    arr s e = arrowBetween' arrOpts s e # lc red
 drawMoveB rev off@(Offsets dx dy) c =
   moveArrow rev (trailPoints arrowTrail)
   `atop`
