@@ -28,6 +28,7 @@ module Diagrams.RubiksCube.Model (
   , topLayerFacets, middleLayerFacets, bottomLayerFacets
   -- ** By position
   , centerFacets, cornerFacets, edgeFacets
+  , sideCorners, sideEdges
   -- * Rotating the whole cube
   , Aut
   , rotateLeft, rotateRight
@@ -238,13 +239,13 @@ rightCol = lens getter setter
     setter (Side tl tc _ ml mc _ bl bc _) (Vec3 tr mr br) =
       Side tl tc tr ml mc mr bl bc br
 
--- | The four corners.
+-- | The four corners of a side.
 sideCorners :: Traversal' (Side a) a
 sideCorners f (Side tl tc tr ml mc mr bl bc br) =
   (\tl' tr' bl' br' -> Side tl' tc tr' ml mc mr bl' bc br')
   <$> f tl <*> f tr <*> f bl <*> f br
 
--- | The four edges.
+-- | The four edges of a side.
 sideEdges :: Traversal' (Side a) a
 sideEdges f (Side tl tc tr ml mc mr bl bc br) =
   (\tc' ml' mr' bc' -> Side tl tc' tr ml' mc mr' bl bc' br)
