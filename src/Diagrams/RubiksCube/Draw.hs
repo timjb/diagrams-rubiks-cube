@@ -250,7 +250,7 @@ drawMoveB rev arrColour off@(Offsets dx dy) c =
 -- > import Control.Lens
 -- > drawMoveExample =
 -- >   let c = solvedRubiksCube ^. undoMoves [L,U,L',U']
--- >   in drawMove L with c
+-- >   in drawMove L red with c
 drawMove
   :: (RubiksCubeBackend n b, Color c)
   => Move
