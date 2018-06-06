@@ -1,3 +1,5 @@
+nix:
+  enable: true
 flags: {}
 packages:
 - '.'
