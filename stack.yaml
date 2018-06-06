@@ -1,5 +1,9 @@
 flags: {}
 packages:
 - '.'
-extra-deps: []
-resolver: lts-9.17
+extra-deps:
+- diagrams-lib-1.4.2.2
+- diagrams-core-1.4.1
+- diagrams-solve-0.1.1
+- dual-tree-0.2.2
+resolver: lts-11.11
