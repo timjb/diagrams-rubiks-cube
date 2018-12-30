@@ -22,10 +22,10 @@ For an example, take a look at this [beginner's manual for solving the Rubik's C
 [travis-url]: https://travis-ci.org/timjb/diagrams-rubiks-cube
 [moves-image]: https://cdn.rawgit.com/timjb/diagrams-rubiks-cube/master/diagrams/src_Diagrams_RubiksCube_Draw_drawMovesExample.svg
 [hackage-image]: https://img.shields.io/hackage/v/diagrams-rubiks-cube.svg?style=flat
-[hackage-url]: http://hackage.haskell.org/package/diagrams-rubiks-cube
+[hackage-url]: https://hackage.haskell.org/package/diagrams-rubiks-cube
 [hackage-deps-image]: https://img.shields.io/hackage-deps/v/diagrams-rubiks-cube.svg?style=flat
-[hackage-deps-url]: http://packdeps.haskellers.com/feed?needle=diagrams-rubiks-cube
+[hackage-deps-url]: https://packdeps.haskellers.com/feed?needle=diagrams-rubiks-cube
 [codeclimate-url]: https://codeclimate.com/github/timjb/diagrams-rubiks-cube
 [codeclimate-image]: https://codeclimate.com/github/timjb/diagrams-rubiks-cube/badges/gpa.svg
-[solving-manual-pdf]: http://timbaumann.info/mathezirkel-kurs/rubiks-wuerfel-workshop/anleitung.pdf
+[solving-manual-pdf]: https://timbaumann.info/mathezirkel-kurs/rubiks-wuerfel-workshop/anleitung.pdf
 [solving-manual-source]: https://github.com/timjb/mathezirkel-kurs/blob/gh-pages/rubiks-wuerfel-workshop/anleitung.tex
