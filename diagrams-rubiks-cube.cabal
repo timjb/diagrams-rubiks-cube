@@ -12,7 +12,7 @@ category:            Graphics
 build-type:          Simple
 extra-source-files:  README.md, CHANGELOG.md, diagrams/*.svg
 extra-doc-files:     diagrams/*.svg
-cabal-version:       >= 1.18
+cabal-version:       1.18
 
 source-repository head
   type:     git
@@ -26,7 +26,7 @@ library
                        Diagrams.RubiksCube.Draw
   build-depends:       base >= 4.6 && < 5,
                        diagrams-lib >= 1.3 && < 1.5,
-                       lens >= 4.6.0.1 && < 5,
+                       lens >= 4.6.0.1 && < 5.3,
                        data-default-class >= 0.0.1 && < 0.2,
                        distributive >= 0.4.4 && < 1,
                        adjunctions >= 4.2.1 && < 5
