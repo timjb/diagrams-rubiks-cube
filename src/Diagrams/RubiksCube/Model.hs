@@ -29,6 +29,17 @@ module Diagrams.RubiksCube.Model (
   -- ** By position
   , centerFacets, cornerFacets, edgeFacets
   , sideCorners, sideEdges
+  -- ** By rows
+  , upRows
+  , middleRows
+  , downRows
+  -- ** By cols
+  , leftCols
+  , _centerCols
+  , rightCols
+  , frontCols
+  , _betweenCols
+  , backCols
   -- * Rotating the whole cube
   , Aut
   , rotateLeft, rotateRight
