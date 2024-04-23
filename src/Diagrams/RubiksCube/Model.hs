@@ -35,10 +35,10 @@ module Diagrams.RubiksCube.Model (
   , downRows
   -- ** By cols
   , leftCols
-  , _centerCols
+  , centerCols
   , rightCols
   , frontCols
-  , _betweenCols
+  , betweenCols
   , backCols
   -- * Rotating the whole cube
   , Aut
@@ -407,8 +407,8 @@ verticalCols colLens = lens getter setter
 leftCols :: ColsLens a
 leftCols = verticalCols leftCol
 
-_centerCols :: ColsLens a
-_centerCols = verticalCols centerCol
+centerCols :: ColsLens a
+centerCols = verticalCols centerCol
 
 rightCols :: ColsLens a
 rightCols = verticalCols rightCol
@@ -436,8 +436,8 @@ ringCols colLens = lens getter setter
 frontCols :: ColsLens a
 frontCols = ringCols leftCol
 
-_betweenCols :: ColsLens a
-_betweenCols = ringCols centerCol
+betweenCols :: ColsLens a
+betweenCols = ringCols centerCol
 
 backCols :: ColsLens a
 backCols = ringCols rightCol
